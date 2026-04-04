@@ -8,10 +8,16 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 
-class SessionStats(BaseModel):
-    incorporated: int = 0
-    filtered: int = 0
-    quarantined: int = 0
+class StoredPacket(BaseModel):
+    id: int
+    sequence_number: int
+    sender_login: str
+    sender_avatar_url: str
+    domain: str
+    body: str
+    created_at: str
+    risk_level: str
+    threat_notes: list[str] = []
 
 
 class State(BaseModel):
@@ -20,8 +26,8 @@ class State(BaseModel):
             datetime.now(timezone.utc) - timedelta(hours=24)
         ).strftime("%Y-%m-%dT%H:%M:%SZ")
     )
-    session_stats: SessionStats = Field(default_factory=SessionStats)
-    governor_rules: list = Field(default_factory=list)
+    incorporated_packets: list[StoredPacket] = Field(default_factory=list)
+    filtered_packets: list[StoredPacket] = Field(default_factory=list)
 
 
 STATE_PATH = Path(os.getenv("FEED_STATE_PATH", Path.home() / ".feed" / "state.json"))
@@ -59,14 +65,3 @@ def advance_cursor(state: State, timestamp: str) -> None:
     """Update cursor only if timestamp is strictly newer."""
     if timestamp > state.cursor:
         state.cursor = timestamp
-
-
-def increment_stat(state: State, action: str) -> None:
-    """Increment incorporated/filtered/quarantined counter."""
-    stats = state.session_stats
-    if action == "incorporated":
-        stats.incorporated += 1
-    elif action == "filtered":
-        stats.filtered += 1
-    elif action == "quarantined":
-        stats.quarantined += 1

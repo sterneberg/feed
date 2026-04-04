@@ -1,6 +1,6 @@
 """Shared Pydantic models and packet assembly."""
 
-import os
+import re
 from pydantic import BaseModel
 from feed.github import RawIssue, check_org_membership
 from feed.governor import classify
@@ -19,6 +19,19 @@ class Packet(BaseModel):
     created_at: str
     risk_level: str
     threat_notes: list[str]
+    quarantined_by: str | None = None
+
+
+def extract_team_brain(body: str) -> str:
+    """Return only the content under the '## Team Brain' section, stripped."""
+    match = re.search(r"^##\s+Team Brain\s*$", body, re.MULTILINE | re.IGNORECASE)
+    if not match:
+        return ""
+    after = body[match.end():]
+    next_heading = re.search(r"^#{1,2}\s", after, re.MULTILINE)
+    if next_heading:
+        after = after[: next_heading.start()]
+    return after.strip()
 
 
 def extract_domain(labels: list) -> str:
@@ -30,13 +43,21 @@ def extract_domain(labels: list) -> str:
     return "general"
 
 
+def _extract_quarantined_by(labels: list) -> str | None:
+    """If a 'quarantined:username' label exists, return the username."""
+    for label in labels:
+        name = label.name if hasattr(label, "name") else label.get("name", "")
+        if name.startswith("quarantined:"):
+            return name.split(":", 1)[1]
+    return None
+
+
 async def build_packets(
     raw_issues: list[RawIssue],
     org: str,
     token: str,
 ) -> list[Packet]:
     """Fetch org membership per unique sender, classify each issue, return Packets."""
-    # Cache membership lookups
     membership_cache: dict[str, bool] = {}
 
     for issue in raw_issues:
@@ -45,12 +66,22 @@ async def build_packets(
             membership_cache[login] = await check_org_membership(org, login, token)
 
     packets = []
-    for i, issue in enumerate(raw_issues):
+    for issue in raw_issues:
+        # Skip issues already incorporated or filtered globally
+        label_names = {
+            (l.name if hasattr(l, "name") else l.get("name", ""))
+            for l in issue.labels
+        }
+        if "incorporated" in label_names or "filtered" in label_names:
+            continue
+
         login = issue.user.login
         is_member = membership_cache.get(login, False)
-        body = issue.body or ""
+        raw_body = issue.body or ""
+        body = extract_team_brain(raw_body) or raw_body
         risk_level, threat_notes = classify(body, login, is_member)
         domain = extract_domain(issue.labels)
+        quarantined_by = _extract_quarantined_by(issue.labels)
 
         packets.append(
             Packet(
@@ -63,6 +94,7 @@ async def build_packets(
                 created_at=issue.created_at,
                 risk_level=risk_level,
                 threat_notes=threat_notes,
+                quarantined_by=quarantined_by,
             )
         )
 

@@ -44,3 +44,36 @@ def incorporate(
 
     print(f"Incorporated #{issue_number} into {target}")
     return target
+
+
+def remove(
+    knowledge_root: str | Path,
+    issue_number: int,
+    domain: str,
+) -> Path | None:
+    """
+    Remove the feed block for the given issue number from the appropriate file.
+
+    Returns the path that was modified, or None if not found.
+    """
+    import re
+
+    root = Path(knowledge_root).expanduser().resolve()
+    relative = DOMAIN_MAP.get(domain, DOMAIN_MAP["general"])
+    target = root / relative
+
+    if not target.exists():
+        return None
+
+    content = target.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"\n?---\n<!-- feed:#" + str(issue_number) + r" ·.*?-->\n.*?\n---\n",
+        re.DOTALL,
+    )
+    new_content = pattern.sub("", content)
+    if new_content == content:
+        return None
+
+    target.write_text(new_content, encoding="utf-8")
+    print(f"Removed #{issue_number} from {target}")
+    return target
