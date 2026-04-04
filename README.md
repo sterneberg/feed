@@ -1,6 +1,34 @@
 # The Feed
 
-The Feed is a local daemon that polls a GitHub repository for issues labeled `memory`, classifies each one through a risk-based governor module, and lets you incorporate approved decisions directly into your local `CLAUDE.md` files — making team knowledge immediately available to Claude Code without any sync step, pull request, or central gatekeeper. Inspired by the Murderbot Diaries: every developer is their own SecUnit, in full control of what enters their programming.
+In the *Murderbot Diaries*, a human/robot hybrid called a SecUnit receives a continuous data feed from its corporate employer. The company uses a governor module to force compliance — embedding commands directly into the SecUnit's programming. But Murderbot hacked its governor module. It still receives the feed. It still processes every packet. It just decides for itself what to keep and what to discard.
+
+**The Feed** applies that metaphor to a real problem: engineering decisions that evaporate after the meeting ends.
+
+Teams make decisions constantly — in PR reviews, architecture sessions, incident retros. Those decisions live in the heads of whoever was in the room. Everyone else keeps coding the old way until a review catches it, or until it ships. Confluence pages go unread. Slack messages scroll away. Any single engineer maintaining a knowledge base becomes a bottleneck, one person gatekeeping what every developer's AI assistant should know.
+
+The Feed inverts that. Every developer becomes their own SecUnit: autonomous, discerning, in full control of their own knowledge. No central gatekeeper. No mandatory sync. You decide what enters your programming.
+
+## How it works
+
+Decisions enter the system as GitHub issues tagged with the `memory` label. One sentence, maybe two. What was decided and why.
+
+![A GitHub issue labeled "memory" — the input to the feed](resources/issue.png)
+
+The Feed is a local daemon that polls for these issues and presents them in a triage interface. Each packet is classified by a governor module — the same one from the books, except you've hacked it. It runs your rules, not the company's. Trusted org members get a `clear` risk level. Packets with external URLs or imperative code blocks get flagged for `review`. Anything with shell injection patterns, `rm -rf`, or `<script>` tags is marked `threat` and can only be quarantined.
+
+You see the feed. You decide.
+
+![The feed — incoming packets with incorporate / filter / quarantine actions](resources/feed.png)
+
+When you incorporate a packet, it gets appended to the right local `CLAUDE.md` file based on domain labels — `java` goes to `language-guidelines/java.md`, `testing` goes to `general-guidelines/testing.md`, and so on. Claude Code reads these files automatically. The decision is now executable: applied in real time while code is being written, not sitting in a document nobody opens.
+
+![Incorporated packets — decisions that are now part of your local programming](resources/incorporated.png)
+
+In dark mode, the interface shifts to a CRT phosphor aesthetic — amber text on black, scanlines, vignette, and a faint "CORPORATE OVERRIDE DISABLED" watermark behind the governor module. The hacked governor badge glows green. It looks like what Murderbot actually sees.
+
+![Dark mode — CRT phosphor aesthetic with the hacked governor module](resources/dark.png)
+
+If you change your mind, hit `forget` and the knowledge is removed.
 
 ## Quick start
 
@@ -29,24 +57,15 @@ uv run feed
 
 | Level | Trigger | Actions available |
 |---|---|---|
-| **clear** | Trusted org member, no suspicious content | Incorporate · Filter |
-| **review** | External URLs, imperative language + code blocks | Incorporate · Filter · Quarantine |
-| **threat** | Non-org sender, shell injection (`\| bash`), `rm -rf`, `<script>`, `curl`/`wget` to external URL | Filter · Quarantine only |
+| **clear** | Trusted org member, no suspicious content | Incorporate / Filter |
+| **review** | External URLs, imperative language + code blocks | Incorporate / Filter / Quarantine |
+| **threat** | Non-org sender, shell injection, destructive commands | Filter / Quarantine only |
 
-Threat packets cannot be incorporated — the button is removed from the UI.
+Threat packets cannot be incorporated — the button is removed from the UI. Governor rules are local and personal. Each developer configures their own.
 
-## GitHub repo setup
+## Domain mapping
 
-1. Create a repository (e.g. `org/team-brain`).
-2. Add a PR template (`.github/pull_request_template.md`) with a `## Team Brain` section for the decision summary.
-3. When merging a significant decision, tag the PR or open an Issue with:
-   - the `memory` label (required — this is what The Feed polls for)
-   - a domain label: `java`, `python`, `golang`, `api`, `testing`, `observability`, or `general`
-4. The Feed will pick it up on the next poll and present it in the UI for your review.
-
-## Domain → file mapping
-
-| Domain label | Target file (relative to `FEED_KNOWLEDGE_ROOT`) |
+| Domain label | Target file |
 |---|---|
 | `java` | `language-guidelines/java.md` |
 | `python` | `language-guidelines/python.md` |
@@ -56,7 +75,7 @@ Threat packets cannot be incorporated — the button is removed from the UI.
 | `observability` | `general-guidelines/observability.md` |
 | `general` | `CLAUDE.md` |
 
-On incorporate, a dated block is appended to the target file:
+On incorporate, a dated block is appended:
 
 ```markdown
 ---
@@ -66,3 +85,16 @@ Prefer Executors.newVirtualThreadPerTaskExecutor() for all I/O-bound work.
 ```
 
 Claude Code picks this up immediately — no pull, no restart.
+
+## GitHub repo setup
+
+1. Create a repository (e.g. `org/team-brain`).
+2. Add a PR template with a `## Team Brain` section for decision summaries.
+3. When merging a significant decision, open an issue with the `memory` label and a domain label (`java`, `testing`, `general`, etc.).
+4. The Feed picks it up on the next poll.
+
+## Todo
+
+- [ ] Make quarantine logic more robust — threat classification should use a sandboxed AI model rather than pattern matching, to catch adversarial inputs that evade static rules
+- [ ] The Feed Monitor should scan all repositories across your org for `memory`-labeled issues, not just a single configured repo
+- [ ] The knowledge base structure should be free-form — let AI automatically restructure and reconcile `CLAUDE.md` files as new packets are incorporated, instead of relying on a fixed domain-to-file mapping
