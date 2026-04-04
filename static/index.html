@@ -2,9 +2,709 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Feed — SecUnit-7</title>
+  <style>
+    :root {
+      --bg: #f4f4f2;
+      --bg-card: #ffffff;
+      --bg-hud: #1a1a18;
+      --bg-governor: #f0efe8;
+      --text: #1a1a18;
+      --text-dim: #666660;
+      --text-hud: #e8e8e0;
+      --text-hud-dim: #999990;
+      --border: #ddddd8;
+      --amber: #c8820a;
+      --amber-bg: #fff8e8;
+      --amber-border: #e8c060;
+      --green: #2a7a2a;
+      --green-bg: #eaf4ea;
+      --green-border: #a8d8a8;
+      --red: #aa2222;
+      --red-bg: #fdeaea;
+      --red-border: #f0a8a8;
+      --gray: #555550;
+      --gray-bg: #f0f0ec;
+      --gray-border: #cccccc;
+      --pulse: #f5a623;
+      --font: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111110;
+        --bg-card: #1a1a18;
+        --bg-hud: #0d0d0c;
+        --bg-governor: #141412;
+        --text: #d8d8d0;
+        --text-dim: #888880;
+        --text-hud: #d8d8d0;
+        --text-hud-dim: #666660;
+        --border: #2a2a28;
+        --amber: #f5a623;
+        --amber-bg: #1e1800;
+        --amber-border: #5a3e00;
+        --green: #4ab84a;
+        --green-bg: #0a1a0a;
+        --green-border: #1a4a1a;
+        --red: #e05050;
+        --red-bg: #1a0808;
+        --red-border: #4a1818;
+        --gray: #888880;
+        --gray-bg: #1e1e1c;
+        --gray-border: #333330;
+        --pulse: #f5a623;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HUD bar ─────────────────────────────────────────── */
+    #hud {
+      background: var(--bg-hud);
+      color: var(--text-hud);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid #2a2a28;
+    }
+
+    #hud-unit {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    #hud-meta {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+      color: var(--text-hud-dim);
+      font-size: 12px;
+    }
+
+    #hud-meta span { white-space: nowrap; }
+    #hud-meta .val { color: var(--text-hud); }
+
+    #governor-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #3a3a38;
+      border-radius: 3px;
+      padding: 3px 10px;
+      font-size: 12px;
+      color: var(--amber);
+      white-space: nowrap;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* ── Main layout ─────────────────────────────────────── */
+    #main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    /* ── Sync indicator ──────────────────────────────────── */
+    #sync-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 6px 0 14px;
+      font-size: 11px;
+      color: var(--text-dim);
+      gap: 6px;
+    }
+
+    .sync-arrow {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    /* ── Metrics row ─────────────────────────────────────── */
+    #metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      text-align: center;
+      padding: 16px 8px;
+    }
+
+    .metric-count {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .metric-card.incorporated .metric-count { color: var(--green); }
+    .metric-card.filtered .metric-count { color: var(--gray); }
+    .metric-card.quarantined .metric-count { color: var(--amber); }
+
+    /* ── Feed section ────────────────────────────────────── */
+    #feed-header {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Packet card ─────────────────────────────────────── */
+    .packet-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+      padding: 14px 16px;
+    }
+
+    .packet-card.risk-threat {
+      border-left: 3px solid var(--red);
+    }
+
+    .packet-card.risk-review {
+      border-left: 3px solid var(--amber);
+    }
+
+    .packet-card.risk-clear {
+      border-left: 3px solid var(--green);
+    }
+
+    .packet-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .seq-num {
+      font-size: 12px;
+      color: var(--text-dim);
+      min-width: 48px;
+    }
+
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+
+    .sender-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .badges {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-domain {
+      background: var(--gray-bg);
+      color: var(--gray);
+      border: 1px solid var(--gray-border);
+    }
+
+    .badge-clear {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid var(--green-border);
+    }
+
+    .badge-review {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid var(--amber-border);
+    }
+
+    .badge-threat {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid var(--red-border);
+    }
+
+    .packet-timestamp {
+      font-size: 11px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .threat-bar {
+      background: var(--red-bg);
+      border: 1px solid var(--red-border);
+      color: var(--red);
+      font-size: 11px;
+      padding: 5px 10px;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .packet-body {
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .packet-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 5px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      letter-spacing: 0.02em;
+      transition: opacity 0.1s;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-incorporate {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+      color: var(--green);
+    }
+
+    .btn-filter {
+      background: var(--gray-bg);
+      border-color: var(--gray-border);
+      color: var(--gray);
+    }
+
+    .btn-quarantine {
+      background: var(--amber-bg);
+      border-color: var(--amber-border);
+      color: var(--amber);
+    }
+
+    .result-tag {
+      font-size: 11px;
+      color: var(--text-dim);
+      padding: 5px 0;
+      font-style: italic;
+    }
+
+    /* ── Loading / empty states ──────────────────────────── */
+    #loading, #empty {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 40px 20px;
+      font-size: 12px;
+    }
+
+    /* ── Governor section ────────────────────────────────── */
+    #governor-section {
+      margin-top: 30px;
+      background: var(--bg-governor);
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    #governor-title {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    #governor-title .sub {
+      font-size: 11px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    #governor-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .rule-list {
+      list-style: none;
+      margin-bottom: 14px;
+    }
+
+    .rule-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      padding: 3px 0;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .rule-icon {
+      flex-shrink: 0;
+      width: 14px;
+      text-align: center;
+    }
+
+    .rule-icon.trust { color: var(--green); }
+    .rule-icon.block { color: var(--red); }
+    .rule-icon.flag  { color: var(--amber); }
+
+    .btn-edit {
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    #governor-footer {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+
+    /* ── Scroll hint ─────────────────────────────────────── */
+    #scroll-hint {
+      text-align: center;
+      padding: 10px 0;
+      color: var(--text-dim);
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
-  <h1>The Feed — stub</h1>
+
+<!-- HUD -->
+<div id="hud">
+  <span id="hud-unit">SecUnit-7 / feed monitor</span>
+  <div id="hud-meta">
+    <span>cursor <span class="val" id="hud-cursor">—</span></span>
+    <span><span class="val" id="hud-pending">0</span> packets pending</span>
+  </div>
+  <div id="governor-badge">
+    <div class="pulse-dot"></div>
+    governor active
+  </div>
+</div>
+
+<!-- Main content -->
+<div id="main">
+
+  <!-- Sync bar -->
+  <div id="sync-bar">
+    <span>last sync</span>
+    <span class="sync-arrow">↓</span>
+  </div>
+
+  <!-- Metrics -->
+  <div id="metrics">
+    <div class="metric-card incorporated">
+      <div class="metric-count" id="stat-incorporated">0</div>
+      <div class="metric-label">incorporated</div>
+    </div>
+    <div class="metric-card filtered">
+      <div class="metric-count" id="stat-filtered">0</div>
+      <div class="metric-label">filtered</div>
+    </div>
+    <div class="metric-card quarantined">
+      <div class="metric-count" id="stat-quarantined">0</div>
+      <div class="metric-label">quarantined</div>
+    </div>
+  </div>
+
+  <!-- Feed -->
+  <div id="feed-header">INCOMING FEED · <span id="packet-count">0</span> NEW PACKETS SINCE LAST CURSOR</div>
+
+  <div id="feed-list">
+    <div id="loading">fetching packets…</div>
+  </div>
+
+  <div id="scroll-hint">↓</div>
+
+  <!-- Governor module -->
+  <div id="governor-section">
+    <div id="governor-title">
+      GOVERNOR MODULE · LOCAL RULES
+      <div class="sub">
+        <span id="governor-subtitle">active ruleset</span>
+        <button class="btn-edit" onclick="return false">edit rules ↗</button>
+      </div>
+    </div>
+    <ul class="rule-list" id="rule-list">
+      <li><span class="rule-icon trust">✓</span> loading ruleset…</li>
+    </ul>
+    <div id="governor-footer">
+      <span>governor v1.0</span>
+      <span>cursor advances on session end</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Utilities ───────────────────────────────────────────
+  function fmtCursor(iso) {
+    if (!iso) return '—';
+    return iso.replace('T', ' ').replace('Z', 'Z').slice(0, 20) + 'Z';
+  }
+
+  function fmtTimestamp(iso) {
+    if (!iso) return '';
+    // "04-03 · 08:14"
+    const d = new Date(iso);
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dy = String(d.getUTCDate()).padStart(2, '0');
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const mm = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${mo}-${dy} · ${hh}:${mm}`;
+  }
+
+  function avatarColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    const hue = h % 360;
+    return `hsl(${hue}, 45%, 42%)`;
+  }
+
+  function initials(name) {
+    const parts = name.split(/[\s._-]+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── State ────────────────────────────────────────────────
+  let packets = [];
+  let actionedIds = new Set();
+
+  // ── Render ───────────────────────────────────────────────
+  function renderPackets() {
+    const list = document.getElementById('feed-list');
+    if (packets.length === 0) {
+      list.innerHTML = '<div id="empty">no new packets since last cursor</div>';
+      return;
+    }
+    list.innerHTML = packets.map(renderCard).join('');
+  }
+
+  function renderCard(p) {
+    const actioned = actionedIds.has(p.id);
+    const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
+    const col = avatarColor(p.sender_login);
+    const ini = initials(p.sender_login);
+    const ts = fmtTimestamp(p.created_at);
+
+    const threatBar = p.risk_level === 'threat'
+      ? `<div class="threat-bar">governor: ${escHtml(p.threat_notes.join(' · '))} · automatic quarantine recommended</div>`
+      : '';
+
+    let buttons = '';
+    if (actioned) {
+      const tag = actionedIds.get ? '' : '';
+      buttons = `<div class="result-tag" id="result-${p.id}"></div>`;
+    } else {
+      const inc = p.risk_level !== 'threat'
+        ? `<button class="btn btn-incorporate" onclick="doAction(${p.id},'incorporate')">incorporate</button>`
+        : '';
+      const flt = `<button class="btn btn-filter" onclick="doAction(${p.id},'filter')">filter</button>`;
+      const qua = p.risk_level !== 'clear'
+        ? `<button class="btn btn-quarantine" onclick="doAction(${p.id},'quarantine')">quarantine</button>`
+        : '';
+      buttons = `<div class="packet-actions" id="actions-${p.id}">${inc}${flt}${qua}</div>`;
+    }
+
+    return `
+<div class="packet-card risk-${p.risk_level}" id="card-${p.id}">
+  <div class="packet-header">
+    <span class="seq-num">${escHtml(seqStr)}</span>
+    <div class="avatar" style="background:${col}">${escHtml(ini)}</div>
+    <span class="sender-name">${escHtml(p.sender_login)}</span>
+    <div class="badges">
+      <span class="badge badge-domain">${escHtml(p.domain)}</span>
+      <span class="badge badge-${p.risk_level}">${escHtml(p.risk_level)}</span>
+      <span class="packet-timestamp">${escHtml(ts)}</span>
+    </div>
+  </div>
+  ${threatBar}
+  <div class="packet-body">${escHtml(p.body)}</div>
+  ${buttons}
+</div>`;
+  }
+
+  // ── Actions ──────────────────────────────────────────────
+  async function doAction(id, action) {
+    // Disable buttons immediately
+    const actionsDiv = document.getElementById(`actions-${id}`);
+    if (actionsDiv) {
+      actionsDiv.querySelectorAll('button').forEach(b => b.disabled = true);
+    }
+
+    try {
+      const resp = await fetch(`/api/${action}/${id}`, { method: 'POST' });
+      const data = await resp.json();
+      actionedIds.add(id);
+
+      if (actionsDiv) {
+        let label = action;
+        if (action === 'incorporate' && data.file) {
+          const fname = data.file.split('/').pop();
+          label = `incorporated into ${fname}`;
+        } else if (action === 'filter') {
+          label = 'filtered out';
+        } else if (action === 'quarantine') {
+          label = 'quarantined';
+        }
+        actionsDiv.outerHTML = `<div class="result-tag">${escHtml(label)}</div>`;
+      }
+
+      fetchStats();
+    } catch (e) {
+      if (actionsDiv) {
+        actionsDiv.querySelectorAll('button').forEach(b => b.disabled = false);
+      }
+      console.error('action failed', e);
+    }
+  }
+
+  // ── API fetchers ─────────────────────────────────────────
+  async function fetchPackets() {
+    try {
+      const resp = await fetch('/api/packets');
+      packets = await resp.json();
+      if (!Array.isArray(packets)) packets = [];
+      document.getElementById('packet-count').textContent = packets.length;
+      document.getElementById('hud-pending').textContent = packets.length;
+      renderPackets();
+    } catch (e) {
+      console.error('fetchPackets failed', e);
+      document.getElementById('feed-list').innerHTML =
+        '<div id="empty">error fetching packets</div>';
+    }
+  }
+
+  async function fetchStats() {
+    try {
+      const resp = await fetch('/api/stats');
+      const data = await resp.json();
+      document.getElementById('stat-incorporated').textContent = data.incorporated ?? 0;
+      document.getElementById('stat-filtered').textContent = data.filtered ?? 0;
+      document.getElementById('stat-quarantined').textContent = data.quarantined ?? 0;
+      if (data.cursor) {
+        document.getElementById('hud-cursor').textContent = fmtCursor(data.cursor);
+      }
+    } catch (e) {
+      console.error('fetchStats failed', e);
+    }
+  }
+
+  async function fetchGovernor() {
+    try {
+      const resp = await fetch('/api/governor');
+      const data = await resp.json();
+      const rules = data.rules || [];
+      const iconMap = { trust: '✓', block: '✗', flag: '!' };
+      const ul = document.getElementById('rule-list');
+      ul.innerHTML = rules.map(r => {
+        const icon = iconMap[r.type] || '·';
+        return `<li><span class="rule-icon ${r.type}">${icon}</span> ${escHtml(r.description)}</li>`;
+      }).join('');
+    } catch (e) {
+      console.error('fetchGovernor failed', e);
+    }
+  }
+
+  // ── Init & polling ───────────────────────────────────────
+  fetchStats();
+  fetchPackets();
+  fetchGovernor();
+
+  setInterval(fetchPackets, 30000);
+  setInterval(fetchStats, 10000);
+</script>
 </body>
 </html>
