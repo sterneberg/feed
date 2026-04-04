@@ -132,65 +132,43 @@
       padding: 20px 16px 60px;
     }
 
-    /* ── Sync indicator ──────────────────────────────────── */
-    #sync-bar {
+    /* ── Tabs ────────────────────────────────────────────── */
+    .tabs {
       display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 6px 0 14px;
-      font-size: 11px;
-      color: var(--text-dim);
-      gap: 6px;
-    }
-
-    .sync-arrow {
-      font-size: 14px;
-      color: var(--text-dim);
-    }
-
-    /* ── Metrics row ─────────────────────────────────────── */
-    #metrics {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      margin-bottom: 20px;
-    }
-
-    .metric-card {
-      background: var(--bg-card);
-      text-align: center;
-      padding: 16px 8px;
-    }
-
-    .metric-count {
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .metric-label {
-      font-size: 11px;
-      color: var(--text-dim);
-      letter-spacing: 0.05em;
-    }
-
-    .metric-card.incorporated .metric-count { color: var(--green); }
-    .metric-card.filtered .metric-count { color: var(--gray); }
-    .metric-card.quarantined .metric-count { color: var(--amber); }
-
-    /* ── Feed section ────────────────────────────────────── */
-    #feed-header {
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      margin-bottom: 14px;
-      padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
     }
+
+    .tab {
+      font-family: var(--font);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      padding: 10px 18px;
+      border: none;
+      background: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+
+    .tab:hover { color: var(--text); }
+
+    .tab.active {
+      color: var(--text);
+      border-bottom-color: var(--amber);
+    }
+
+    .tab .count {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-left: 4px;
+    }
+
+    .tab.active .count { color: var(--text); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
 
     /* ── Packet card ─────────────────────────────────────── */
     .packet-card {
@@ -200,17 +178,9 @@
       padding: 14px 16px;
     }
 
-    .packet-card.risk-threat {
-      border-left: 3px solid var(--red);
-    }
-
-    .packet-card.risk-review {
-      border-left: 3px solid var(--amber);
-    }
-
-    .packet-card.risk-clear {
-      border-left: 3px solid var(--green);
-    }
+    .packet-card.risk-threat { border-left: 3px solid var(--red); }
+    .packet-card.risk-review { border-left: 3px solid var(--amber); }
+    .packet-card.risk-clear { border-left: 3px solid var(--green); }
 
     .packet-header {
       display: flex;
@@ -239,10 +209,7 @@
       text-transform: uppercase;
     }
 
-    .sender-name {
-      font-weight: 600;
-      font-size: 13px;
-    }
+    .sender-name { font-weight: 600; font-size: 13px; }
 
     .badges {
       margin-left: auto;
@@ -300,6 +267,16 @@
       letter-spacing: 0.02em;
     }
 
+    .quarantine-bar {
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-border);
+      color: var(--amber);
+      font-size: 11px;
+      padding: 5px 10px;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
     .packet-body {
       font-size: 12px;
       line-height: 1.6;
@@ -328,10 +305,7 @@
       transition: opacity 0.1s;
     }
 
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .btn-incorporate {
       background: var(--green-bg);
@@ -351,6 +325,12 @@
       color: var(--amber);
     }
 
+    .btn-forget {
+      background: var(--red-bg);
+      border-color: var(--red-border);
+      color: var(--red);
+    }
+
     .result-tag {
       font-size: 11px;
       color: var(--text-dim);
@@ -359,7 +339,7 @@
     }
 
     /* ── Loading / empty states ──────────────────────────── */
-    #loading, #empty {
+    .empty-state {
       text-align: center;
       color: var(--text-dim);
       padding: 40px 20px;
@@ -393,16 +373,7 @@
       text-transform: none;
     }
 
-    #governor-subtitle {
-      font-size: 12px;
-      color: var(--text-dim);
-      margin-bottom: 10px;
-    }
-
-    .rule-list {
-      list-style: none;
-      margin-bottom: 14px;
-    }
+    .rule-list { list-style: none; margin-bottom: 14px; }
 
     .rule-list li {
       display: flex;
@@ -414,12 +385,7 @@
       line-height: 1.5;
     }
 
-    .rule-icon {
-      flex-shrink: 0;
-      width: 14px;
-      text-align: center;
-    }
-
+    .rule-icon { flex-shrink: 0; width: 14px; text-align: center; }
     .rule-icon.trust { color: var(--green); }
     .rule-icon.block { color: var(--red); }
     .rule-icon.flag  { color: var(--amber); }
@@ -444,14 +410,6 @@
       border-top: 1px solid var(--border);
       padding-top: 8px;
     }
-
-    /* ── Scroll hint ─────────────────────────────────────── */
-    #scroll-hint {
-      text-align: center;
-      padding: 10px 0;
-      color: var(--text-dim);
-      font-size: 18px;
-    }
   </style>
 </head>
 <body>
@@ -472,36 +430,39 @@
 <!-- Main content -->
 <div id="main">
 
-  <!-- Sync bar -->
-  <div id="sync-bar">
-    <span>last sync</span>
-    <span class="sync-arrow">↓</span>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="feed" onclick="switchTab('feed')">
+      Feed <span class="count" id="tab-feed-count"></span>
+    </button>
+    <button class="tab" data-tab="incorporated" onclick="switchTab('incorporated')">
+      Incorporated <span class="count" id="tab-incorporated-count"></span>
+    </button>
+    <button class="tab" data-tab="filtered" onclick="switchTab('filtered')">
+      Filtered <span class="count" id="tab-filtered-count"></span>
+    </button>
   </div>
 
-  <!-- Metrics -->
-  <div id="metrics">
-    <div class="metric-card incorporated">
-      <div class="metric-count" id="stat-incorporated">0</div>
-      <div class="metric-label">incorporated</div>
-    </div>
-    <div class="metric-card filtered">
-      <div class="metric-count" id="stat-filtered">0</div>
-      <div class="metric-label">filtered</div>
-    </div>
-    <div class="metric-card quarantined">
-      <div class="metric-count" id="stat-quarantined">0</div>
-      <div class="metric-label">quarantined</div>
+  <!-- Feed panel -->
+  <div class="tab-panel active" id="panel-feed">
+    <div id="feed-list">
+      <div class="empty-state">fetching packets...</div>
     </div>
   </div>
 
-  <!-- Feed -->
-  <div id="feed-header">INCOMING FEED · <span id="packet-count">0</span> NEW PACKETS SINCE LAST CURSOR</div>
-
-  <div id="feed-list">
-    <div id="loading">fetching packets…</div>
+  <!-- Incorporated panel -->
+  <div class="tab-panel" id="panel-incorporated">
+    <div id="incorporated-list">
+      <div class="empty-state">no incorporated packets yet</div>
+    </div>
   </div>
 
-  <div id="scroll-hint">↓</div>
+  <!-- Filtered panel -->
+  <div class="tab-panel" id="panel-filtered">
+    <div id="filtered-list">
+      <div class="empty-state">no filtered packets yet</div>
+    </div>
+  </div>
 
   <!-- Governor module -->
   <div id="governor-section">
@@ -509,15 +470,15 @@
       GOVERNOR MODULE · LOCAL RULES
       <div class="sub">
         <span id="governor-subtitle">active ruleset</span>
-        <button class="btn-edit" onclick="return false">edit rules ↗</button>
+        <button class="btn-edit" onclick="return false">edit rules</button>
       </div>
     </div>
     <ul class="rule-list" id="rule-list">
-      <li><span class="rule-icon trust">✓</span> loading ruleset…</li>
+      <li><span class="rule-icon trust">✓</span> loading ruleset...</li>
     </ul>
     <div id="governor-footer">
       <span>governor v1.0</span>
-      <span>cursor advances on session end</span>
+      <span>cursor advances on incorporate / filter</span>
     </div>
   </div>
 
@@ -532,7 +493,6 @@
 
   function fmtTimestamp(iso) {
     if (!iso) return '';
-    // "04-03 · 08:14"
     const d = new Date(iso);
     const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
     const dy = String(d.getUTCDate()).padStart(2, '0');
@@ -544,8 +504,7 @@
   function avatarColor(name) {
     let h = 0;
     for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    const hue = h % 360;
-    return `hsl(${hue}, 45%, 42%)`;
+    return `hsl(${h % 360}, 45%, 42%)`;
   }
 
   function initials(name) {
@@ -559,20 +518,39 @@
   }
 
   // ── State ────────────────────────────────────────────────
-  let packets = [];
+  let feedPackets = [];
+  let incorporatedPackets = [];
+  let filteredPackets = [];
   let actionedIds = new Set();
 
-  // ── Render ───────────────────────────────────────────────
-  function renderPackets() {
-    const list = document.getElementById('feed-list');
-    if (packets.length === 0) {
-      list.innerHTML = '<div id="empty">no new packets since last cursor</div>';
-      return;
-    }
-    list.innerHTML = packets.map(renderCard).join('');
+  // ── Tabs ─────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+    document.getElementById(`panel-${name}`).classList.add('active');
   }
 
-  function renderCard(p) {
+  function updateTabCounts() {
+    const feedCount = feedPackets.filter(p => !actionedIds.has(p.id)).length;
+    document.getElementById('tab-feed-count').textContent = feedCount > 0 ? `(${feedCount})` : '';
+    document.getElementById('tab-incorporated-count').textContent =
+      incorporatedPackets.length > 0 ? `(${incorporatedPackets.length})` : '';
+    document.getElementById('tab-filtered-count').textContent =
+      filteredPackets.length > 0 ? `(${filteredPackets.length})` : '';
+  }
+
+  // ── Render: Feed ─────────────────────────────────────────
+  function renderFeed() {
+    const list = document.getElementById('feed-list');
+    if (feedPackets.length === 0) {
+      list.innerHTML = '<div class="empty-state">no new packets since last cursor</div>';
+      return;
+    }
+    list.innerHTML = feedPackets.map(renderFeedCard).join('');
+  }
+
+  function renderFeedCard(p) {
     const actioned = actionedIds.has(p.id);
     const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
     const col = avatarColor(p.sender_login);
@@ -583,18 +561,19 @@
       ? `<div class="threat-bar">governor: ${escHtml(p.threat_notes.join(' · '))} · automatic quarantine recommended</div>`
       : '';
 
+    const quarantineBar = p.quarantined_by
+      ? `<div class="quarantine-bar">quarantined by ${escHtml(p.quarantined_by)}</div>`
+      : '';
+
     let buttons = '';
     if (actioned) {
-      const tag = actionedIds.get ? '' : '';
       buttons = `<div class="result-tag" id="result-${p.id}"></div>`;
     } else {
       const inc = p.risk_level !== 'threat'
         ? `<button class="btn btn-incorporate" onclick="doAction(${p.id},'incorporate')">incorporate</button>`
         : '';
       const flt = `<button class="btn btn-filter" onclick="doAction(${p.id},'filter')">filter</button>`;
-      const qua = p.risk_level !== 'clear'
-        ? `<button class="btn btn-quarantine" onclick="doAction(${p.id},'quarantine')">quarantine</button>`
-        : '';
+      const qua = `<button class="btn btn-quarantine" onclick="doAction(${p.id},'quarantine')">quarantine</button>`;
       buttons = `<div class="packet-actions" id="actions-${p.id}">${inc}${flt}${qua}</div>`;
     }
 
@@ -611,18 +590,78 @@
     </div>
   </div>
   ${threatBar}
+  ${quarantineBar}
   <div class="packet-body">${escHtml(p.body)}</div>
   ${buttons}
 </div>`;
   }
 
+  // ── Render: Incorporated ─────────────────────────────────
+  function renderIncorporated() {
+    const list = document.getElementById('incorporated-list');
+    if (incorporatedPackets.length === 0) {
+      list.innerHTML = '<div class="empty-state">no incorporated packets yet</div>';
+      return;
+    }
+    list.innerHTML = incorporatedPackets.map(p => {
+      const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
+      const col = avatarColor(p.sender_login);
+      const ini = initials(p.sender_login);
+      const ts = fmtTimestamp(p.created_at);
+      return `
+<div class="packet-card risk-clear">
+  <div class="packet-header">
+    <span class="seq-num">${escHtml(seqStr)}</span>
+    <div class="avatar" style="background:${col}">${escHtml(ini)}</div>
+    <span class="sender-name">${escHtml(p.sender_login)}</span>
+    <div class="badges">
+      <span class="badge badge-domain">${escHtml(p.domain)}</span>
+      <span class="packet-timestamp">${escHtml(ts)}</span>
+    </div>
+  </div>
+  <div class="packet-body">${escHtml(p.body)}</div>
+  <div class="packet-actions">
+    <button class="btn btn-forget" onclick="doForget(${p.id})">forget</button>
+  </div>
+</div>`;
+    }).join('');
+  }
+
+  // ── Render: Filtered ─────────────────────────────────────
+  function renderFiltered() {
+    const list = document.getElementById('filtered-list');
+    if (filteredPackets.length === 0) {
+      list.innerHTML = '<div class="empty-state">no filtered packets yet</div>';
+      return;
+    }
+    list.innerHTML = filteredPackets.map(p => {
+      const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
+      const col = avatarColor(p.sender_login);
+      const ini = initials(p.sender_login);
+      const ts = fmtTimestamp(p.created_at);
+      return `
+<div class="packet-card risk-review">
+  <div class="packet-header">
+    <span class="seq-num">${escHtml(seqStr)}</span>
+    <div class="avatar" style="background:${col}">${escHtml(ini)}</div>
+    <span class="sender-name">${escHtml(p.sender_login)}</span>
+    <div class="badges">
+      <span class="badge badge-domain">${escHtml(p.domain)}</span>
+      <span class="packet-timestamp">${escHtml(ts)}</span>
+    </div>
+  </div>
+  <div class="packet-body">${escHtml(p.body)}</div>
+  <div class="packet-actions">
+    <button class="btn btn-incorporate" onclick="doUnfilter(${p.id})">incorporate</button>
+  </div>
+</div>`;
+    }).join('');
+  }
+
   // ── Actions ──────────────────────────────────────────────
   async function doAction(id, action) {
-    // Disable buttons immediately
     const actionsDiv = document.getElementById(`actions-${id}`);
-    if (actionsDiv) {
-      actionsDiv.querySelectorAll('button').forEach(b => b.disabled = true);
-    }
+    if (actionsDiv) actionsDiv.querySelectorAll('button').forEach(b => b.disabled = true);
 
     try {
       const resp = await fetch(`/api/${action}/${id}`, { method: 'POST' });
@@ -637,17 +676,37 @@
         } else if (action === 'filter') {
           label = 'filtered out';
         } else if (action === 'quarantine') {
-          label = 'quarantined';
+          label = 'quarantined on github';
         }
         actionsDiv.outerHTML = `<div class="result-tag">${escHtml(label)}</div>`;
       }
 
-      fetchStats();
+      // Refresh the lists
+      await Promise.all([fetchIncorporated(), fetchFiltered()]);
+      updateTabCounts();
     } catch (e) {
-      if (actionsDiv) {
-        actionsDiv.querySelectorAll('button').forEach(b => b.disabled = false);
-      }
+      if (actionsDiv) actionsDiv.querySelectorAll('button').forEach(b => b.disabled = false);
       console.error('action failed', e);
+    }
+  }
+
+  async function doForget(id) {
+    try {
+      await fetch(`/api/forget/${id}`, { method: 'POST' });
+      await fetchIncorporated();
+      updateTabCounts();
+    } catch (e) {
+      console.error('forget failed', e);
+    }
+  }
+
+  async function doUnfilter(id) {
+    try {
+      await fetch(`/api/unfilter/${id}`, { method: 'POST' });
+      await Promise.all([fetchIncorporated(), fetchFiltered()]);
+      updateTabCounts();
+    } catch (e) {
+      console.error('unfilter failed', e);
     }
   }
 
@@ -655,31 +714,46 @@
   async function fetchPackets() {
     try {
       const resp = await fetch('/api/packets');
-      packets = await resp.json();
-      if (!Array.isArray(packets)) packets = [];
-      document.getElementById('packet-count').textContent = packets.length;
-      document.getElementById('hud-pending').textContent = packets.length;
-      renderPackets();
+      feedPackets = await resp.json();
+      if (!Array.isArray(feedPackets)) feedPackets = [];
+      document.getElementById('hud-pending').textContent = feedPackets.length;
+      renderFeed();
+      updateTabCounts();
     } catch (e) {
       console.error('fetchPackets failed', e);
       document.getElementById('feed-list').innerHTML =
-        '<div id="empty">error fetching packets</div>';
+        '<div class="empty-state">error fetching packets</div>';
     }
+  }
+
+  async function fetchIncorporated() {
+    try {
+      const resp = await fetch('/api/incorporated');
+      incorporatedPackets = await resp.json();
+      if (!Array.isArray(incorporatedPackets)) incorporatedPackets = [];
+      renderIncorporated();
+      updateTabCounts();
+    } catch (e) { console.error('fetchIncorporated failed', e); }
+  }
+
+  async function fetchFiltered() {
+    try {
+      const resp = await fetch('/api/filtered');
+      filteredPackets = await resp.json();
+      if (!Array.isArray(filteredPackets)) filteredPackets = [];
+      renderFiltered();
+      updateTabCounts();
+    } catch (e) { console.error('fetchFiltered failed', e); }
   }
 
   async function fetchStats() {
     try {
       const resp = await fetch('/api/stats');
       const data = await resp.json();
-      document.getElementById('stat-incorporated').textContent = data.incorporated ?? 0;
-      document.getElementById('stat-filtered').textContent = data.filtered ?? 0;
-      document.getElementById('stat-quarantined').textContent = data.quarantined ?? 0;
       if (data.cursor) {
         document.getElementById('hud-cursor').textContent = fmtCursor(data.cursor);
       }
-    } catch (e) {
-      console.error('fetchStats failed', e);
-    }
+    } catch (e) { console.error('fetchStats failed', e); }
   }
 
   async function fetchGovernor() {
@@ -693,14 +767,14 @@
         const icon = iconMap[r.type] || '·';
         return `<li><span class="rule-icon ${r.type}">${icon}</span> ${escHtml(r.description)}</li>`;
       }).join('');
-    } catch (e) {
-      console.error('fetchGovernor failed', e);
-    }
+    } catch (e) { console.error('fetchGovernor failed', e); }
   }
 
   // ── Init & polling ───────────────────────────────────────
   fetchStats();
   fetchPackets();
+  fetchIncorporated();
+  fetchFiltered();
   fetchGovernor();
 
   setInterval(fetchPackets, 30000);
