@@ -24,9 +24,7 @@ When you incorporate a packet, it gets appended to the right local `CLAUDE.md` f
 
 ![Incorporated packets — decisions that are now part of your local programming](resources/incorporated.png)
 
-In dark mode, the interface shifts to a CRT phosphor aesthetic — amber text on black, scanlines, vignette, and a faint "CORPORATE OVERRIDE DISABLED" watermark behind the governor module. The hacked governor badge glows green. It looks like what Murderbot actually sees.
-
-![Dark mode — CRT phosphor aesthetic with the hacked governor module](resources/dark.png)
+![Dark mode — CRT phosphor aesthetic, hacked governor module](resources/dark.png)
 
 If you change your mind, hit `forget` and the knowledge is removed.
 
@@ -61,15 +59,21 @@ uv run feed
 | `FEED_PORT` | no | `2626` | Port the UI is served on |
 | `FEED_POLL_INTERVAL` | no | `900` | Seconds between GitHub polls (frontend polls every 30 s) |
 
-## Governor risk levels
+## How the governor works
 
-| Level | Trigger | Actions available |
+Every packet runs through a three-stage classifier before it reaches the UI.
+
+1. **Canonicalize.** The body is NFKC-folded, stripped of zero-width and control characters, HTML- and percent-decoded, and any long base64-looking token is decoded and appended as a fenced block. Obfuscation tricks — `ba\u200bsh`, `&lt;script&gt;`, `cm0gLXJmIC8=` — collapse to their plain form before any matcher sees them.
+2. **Walk shell ASTs.** Fenced code blocks are parsed with `bashlex`. The walker flags pipelines whose right-hand side is an interpreter (`bash`, `python`, `node`, …) and any `rm` invocation carrying both recursive and force flags, regardless of flag order or long/short form.
+3. **Score weighted signals.** Each hit contributes a weight: strong signals (non-org sender, script tag, interpreter pipe, destructive rm, curl/wget fetching an external URL) score 10; weak signals (external URL alone, imperative tone + code block) score 2. Totals map to risk: `≥ 10` threat, `≥ 4` review, otherwise clear. A single weak signal is not enough — two weak signals combine to a review.
+
+| Level | Typical cause | Actions available |
 |---|---|---|
-| **clear** | Trusted org member, no suspicious content | Incorporate / Filter |
-| **review** | External URLs, imperative language + code blocks | Incorporate / Filter / Quarantine |
-| **threat** | Non-org sender, shell injection, destructive commands | Filter / Quarantine only |
+| **clear** | Trusted sender, no strong or combined weak signals | Incorporate / Filter |
+| **review** | Multiple weak signals (external URL + imperative code block) | Incorporate / Filter / Quarantine |
+| **threat** | Non-org sender, shell injection, destructive commands, external fetch | Filter / Quarantine only |
 
-Threat packets cannot be incorporated — the button is removed from the UI. Governor rules are local and personal. Each developer configures their own.
+Threat packets cannot be incorporated — the button is removed from the UI. The LOCAL RULES panel in the UI surfaces the active weights and the threshold ladder live, rendered from `get_ruleset()` in `src/feed/governor/__init__.py`. Rules are local and personal; each developer configures their own.
 
 ## How routing works
 
@@ -82,7 +86,7 @@ Each target file under `FEED_KNOWLEDGE_ROOT` is treated as one document in a sma
 
 This is deterministic, explainable, and dependency-free (no embeddings, no LLM call in the hot path). A packet mentioning `FastAPI`, `Pydantic`, and `uvicorn` is drawn to `python.md` because those rare tokens already live there. A packet with no meaningful overlap is routed to the catch-all rather than guessed at.
 
-To keep cold start honest — when a target file is empty or missing — the classifier concatenates each file's live contents with a short seed vocabulary (`Spring Boot Maven Gradle…` for `java`, `FastAPI Pydantic asyncio…` for `python`, etc.). As real packets accumulate, the seeds' influence fades proportionally. The seeds live in [`src/feed/classifier.py`](src/feed/classifier.py) and can be edited per deployment.
+Cold-start targets are seeded with a short per-domain vocabulary (`Spring Boot Maven Gradle…` for `java`, `FastAPI Pydantic asyncio…` for `python`). The seeds fade as real packets accumulate, and live in [`src/feed/classifier.py`](src/feed/classifier.py).
 
 | Domain | Target file |
 |---|---|
@@ -96,15 +100,7 @@ To keep cold start honest — when a target file is empty or missing — the cla
 
 ## The dreamer
 
-Ingest-time routing is intentionally simple. It handles obvious cases well and falls back to the catch-all when unsure. Over time, three kinds of drift accumulate:
-
-- Notes that landed in `CLAUDE.md` because the dreamer hadn't yet taught the classifier what they were about.
-- Notes that landed in the wrong file because the classifier only sees literal token overlap, not semantics.
-- Files that have grown long enough to deserve being split, or short-lived topics that have gone stale.
-
-The Feed expects a separate background agent — the **dreamer** — to periodically re-read the full knowledge base, re-sort packets, split or merge files, and prune decisions that no longer apply. The dreamer is not part of this daemon. It runs on its own schedule (hourly, nightly, whenever you like) against the same `FEED_KNOWLEDGE_ROOT`. The ingest path stays cheap and deterministic; the dreamer handles semantics and housekeeping out of band.
-
-Because each incorporated block carries a `<!-- feed:#N · sender · timestamp -->` header, the dreamer can always trace a decision back to its source issue when it needs to justify a move.
+Ingest-time routing is intentionally simple — obvious cases handled, unsure cases routed to the catch-all. A separate background agent, the **dreamer**, is expected to periodically re-read the full knowledge base, re-sort packets, split or merge files, and prune stale decisions. It is not part of this daemon; it runs on its own schedule against the same `FEED_KNOWLEDGE_ROOT`. Each incorporated block carries a `<!-- feed:#N · sender · timestamp -->` header so the dreamer can trace any decision back to its source.
 
 On incorporate, a dated block is appended:
 
@@ -126,5 +122,4 @@ Claude Code picks this up immediately — no pull, no restart.
 
 ## Todo
 
-- [ ] Make quarantine logic more robust — threat classification should use a sandboxed AI model rather than pattern matching, to catch adversarial inputs that evade static rules
 - [ ] Build the **dreamer** — a background agent that periodically re-reads `FEED_KNOWLEDGE_ROOT`, re-sorts packets the TF-IDF router got wrong, splits bloated files, and prunes stale decisions. The ingest path stays cheap and deterministic; the dreamer handles semantics and housekeeping out of band.
