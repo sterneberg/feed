@@ -44,7 +44,7 @@ async def generic_exception_handler(request, exc):
 
 @app.get("/")
 async def index():
-    static_path = Path(__file__).parent.parent.parent / "static" / "index.html"
+    static_path = Path(__file__).parent / "static" / "index.html"
     return HTMLResponse(content=static_path.read_text())
 
 

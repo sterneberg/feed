@@ -32,12 +32,20 @@ If you change your mind, hit `forget` and the knowledge is removed.
 
 ## Quick start
 
-```bash
-export FEED_GITHUB_TOKEN=ghp_...
-export FEED_GITHUB_REPO=org/team-brain
-export FEED_GITHUB_ORG=org
-export FEED_KNOWLEDGE_ROOT=~/code/team-brain
+Run directly from GitHub — no clone required:
 
+```bash
+FEED_GITHUB_TOKEN=ghp_... \
+FEED_GITHUB_REPO=org/team-brain \
+FEED_GITHUB_ORG=org \
+FEED_KNOWLEDGE_ROOT=~/code/team-brain \
+uvx --from git+https://github.com/sterneberg/feed feed
+# open http://localhost:2626
+```
+
+Or if you have the repo checked out locally:
+
+```bash
 uv run feed
 # open http://localhost:2626
 ```
