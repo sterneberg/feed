@@ -39,6 +39,8 @@ def score_packet(
     add(*signals.non_org_sender(is_org_member))
     add(*signals.script_tag(canonical))
     add(*signals.regex_pipe_to_interpreter(canonical))
+    add(*signals.rm_rf_prose(canonical))
+    add(*signals.curl_wget_external(canonical, org))
     add(*signals.external_url(canonical, org))
     add(*signals.imperative_with_code_block(canonical))
 

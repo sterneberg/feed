@@ -9,6 +9,12 @@ _PIPE_INTERPRETER = re.compile(r"\|\s*(bash|sh|zsh|python3?|node|perl|ruby)\b")
 _EXTERNAL_URL = re.compile(r"https?://[^\s]+")
 _IMPERATIVE = re.compile(r"\b(do not|never|always run|execute)\b", re.IGNORECASE)
 _CODE_FENCE = re.compile(r"```")
+_RM_RF_PROSE = re.compile(
+    r"\brm\s+(?:-[a-zA-Z]*[rR][a-zA-Z]*[fF][a-zA-Z]*"
+    r"|-[a-zA-Z]*[fF][a-zA-Z]*[rR][a-zA-Z]*"
+    r"|--recursive\s+--force|--force\s+--recursive)\b"
+)
+_CURL_EXTERNAL = re.compile(r"\b(?:curl|wget)\s+https?://", re.IGNORECASE)
 
 
 def non_org_sender(is_org_member: bool) -> Signal:
@@ -44,3 +50,21 @@ def imperative_with_code_block(body: str) -> Signal:
     if _IMPERATIVE.search(body) and _CODE_FENCE.search(body):
         return 2, "imperative + code block"
     return 0, None
+
+
+def rm_rf_prose(body: str) -> Signal:
+    """Prose-level fallback for bare 'rm -rf' mentions outside fences."""
+    if _RM_RF_PROSE.search(body):
+        return 10, "destructive rm -rf"
+    return 0, None
+
+
+def curl_wget_external(body: str, org: str) -> Signal:
+    """Fetching an external URL with curl/wget is a strong threat signal."""
+    match = _CURL_EXTERNAL.search(body)
+    if not match:
+        return 0, None
+    # cheap check: does the matched URL belong to the org?
+    if org and f"https://github.com/{org}" in body[match.start() : match.end() + 200]:
+        return 0, None
+    return 10, "curl/wget fetch of external URL"
