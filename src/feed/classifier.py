@@ -69,6 +69,13 @@ SEED_DESCRIPTIONS: dict[str, str] = {
         "Grafana dashboards structured logging correlation ids SLO SLI "
         "error budgets distributed tracing alerting runbooks."
     ),
+    "nodejs": (
+        "Node.js JavaScript TypeScript Express Fastify Koa Hapi npm npx "
+        "yarn require module exports ESM CommonJS Promise callback callbacks "
+        "async await middleware router handler app use listen port "
+        "util promisify EventEmitter streams Buffer process env "
+        "webpack babel eslint Jest Vitest supertest nodemon ts-node."
+    ),
     "general": (
         "Team process communication review etiquette onboarding "
         "cross cutting notes."
@@ -131,9 +138,16 @@ def load_corpus(knowledge_root: str | Path) -> dict[str, str]:
     Build the per-domain corpus by concatenating the seed blurb with the
     live contents of each target file under `knowledge_root`. Missing
     files are fine — the seed alone is enough to classify against.
+
+    Also discovers any extra .md files under `language-guidelines/` or
+    `general-guidelines/` that are not in DOMAIN_MAP (e.g. files created
+    by the dreamer). Their stem is used as the domain key.
     """
     root = Path(knowledge_root).expanduser()
     corpus: dict[str, str] = {}
+
+    # Built-in domains (seed blurb + live content).
+    built_in_paths = set(DOMAIN_MAP.values())
     for domain, relative in DOMAIN_MAP.items():
         seed = SEED_DESCRIPTIONS.get(domain, "")
         target = root / relative
@@ -142,6 +156,23 @@ def load_corpus(knowledge_root: str | Path) -> dict[str, str]:
         except OSError:
             live = ""
         corpus[domain] = f"{seed}\n{live}"
+
+    # Extra files added by the dreamer or by hand.
+    for subdir in ("language-guidelines", "general-guidelines"):
+        subdir_path = root / subdir
+        if not subdir_path.exists():
+            continue
+        for md_file in sorted(subdir_path.glob("*.md")):
+            relative = str(md_file.relative_to(root))
+            if relative in built_in_paths:
+                continue
+            domain_key = md_file.stem.lower()
+            try:
+                content = md_file.read_text(encoding="utf-8")
+            except OSError:
+                content = ""
+            corpus[domain_key] = content
+
     return corpus
 
 

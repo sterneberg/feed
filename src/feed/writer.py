@@ -9,8 +9,29 @@ DOMAIN_MAP: dict[str, str] = {
     "api": "general-guidelines/specs-and-plans.md",
     "testing": "general-guidelines/testing.md",
     "observability": "general-guidelines/observability.md",
+    "nodejs": "language-guidelines/nodejs.md",
     "general": "CLAUDE.md",
 }
+
+
+def _resolve_domain_path(root: Path, domain: str) -> Path:
+    """
+    Resolve a domain key to an absolute target path.
+
+    Built-in domains use DOMAIN_MAP. For anything else (files created by
+    the dreamer), we scan language-guidelines/ then general-guidelines/
+    for an existing file whose stem matches the domain key. If nothing
+    exists yet, we default to language-guidelines/<domain>.md.
+    """
+    if domain in DOMAIN_MAP:
+        return root / DOMAIN_MAP[domain]
+
+    for subdir in ("language-guidelines", "general-guidelines"):
+        candidate = root / subdir / f"{domain}.md"
+        if candidate.exists():
+            return candidate
+
+    return root / "language-guidelines" / f"{domain}.md"
 
 
 def incorporate(
@@ -27,8 +48,7 @@ def incorporate(
     Returns the path that was written to.
     """
     root = Path(knowledge_root).expanduser().resolve()
-    relative = DOMAIN_MAP.get(domain, DOMAIN_MAP["general"])
-    target = root / relative
+    target = _resolve_domain_path(root, domain)
 
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -59,8 +79,7 @@ def remove(
     import re
 
     root = Path(knowledge_root).expanduser().resolve()
-    relative = DOMAIN_MAP.get(domain, DOMAIN_MAP["general"])
-    target = root / relative
+    target = _resolve_domain_path(root, domain)
 
     if not target.exists():
         return None

@@ -104,3 +104,64 @@ def test_confidence_threshold_is_reasonable():
     # Sanity check: the threshold is a small positive number. If this
     # ever changes dramatically it's worth re-tuning against real data.
     assert 0.0 < CONFIDENCE_THRESHOLD < 0.2
+
+
+def test_classify_routes_nodejs_to_nodejs(tmp_path):
+    corpus = load_corpus(tmp_path)
+    body = "Register Express middleware with app.use(); prefer named functions over anonymous callbacks."
+    assert classify(body, corpus) == "nodejs"
+
+
+def test_classify_nodejs_async_does_not_bleed_into_python(tmp_path):
+    """async/await/callback tokens should not pull nodejs packets into python."""
+    corpus = load_corpus(tmp_path)
+    body = "Prefer async/await over raw Promise chains in Node.js; wrap callbacks with util.promisify."
+    assert classify(body, corpus) == "nodejs"
+
+
+def test_load_corpus_discovers_extra_language_file(tmp_path):
+    """A file in language-guidelines/ not in DOMAIN_MAP is included as a domain."""
+    nodejs_path = tmp_path / "language-guidelines" / "nodejs.md"
+    nodejs_path.parent.mkdir(parents=True)
+    nodejs_path.write_text("Node.js Express npm async callbacks.")
+
+    corpus = load_corpus(tmp_path)
+    assert "nodejs" in corpus
+    assert "Express" in corpus["nodejs"]
+
+
+def test_load_corpus_discovers_extra_general_file(tmp_path):
+    """A file in general-guidelines/ not in DOMAIN_MAP is included as a domain."""
+    ops_path = tmp_path / "general-guidelines" / "ops.md"
+    ops_path.parent.mkdir(parents=True)
+    ops_path.write_text("Docker Kubernetes Helm deployment manifests.")
+
+    corpus = load_corpus(tmp_path)
+    assert "ops" in corpus
+    assert "Docker" in corpus["ops"]
+
+
+def test_classify_routes_to_dynamically_discovered_domain(tmp_path):
+    """classify() routes to a domain discovered from the filesystem, not just DOMAIN_MAP."""
+    nodejs_path = tmp_path / "language-guidelines" / "nodejs.md"
+    nodejs_path.parent.mkdir(parents=True)
+    nodejs_path.write_text(
+        "Node.js Express npm async callbacks Promise middleware "
+        "require module exports webpack babel eslint "
+        "Node.js Node.js Node.js Express Express Express"
+    )
+
+    corpus = load_corpus(tmp_path)
+    body = "Use Express middleware for request validation in Node.js APIs."
+    assert classify(body, corpus) == "nodejs"
+
+
+def test_discovered_domains_do_not_displace_builtin_seeds(tmp_path):
+    """Built-in seeds still work when extra files are present."""
+    nodejs_path = tmp_path / "language-guidelines" / "nodejs.md"
+    nodejs_path.parent.mkdir(parents=True)
+    nodejs_path.write_text("Node.js Express npm.")
+
+    corpus = load_corpus(tmp_path)
+    body = "Use async def with await for I/O-bound handlers; pytest-asyncio for coroutines."
+    assert classify(body, corpus) == "python"

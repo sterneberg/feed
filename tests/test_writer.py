@@ -73,3 +73,33 @@ def test_block_format(tmp_path):
     assert "<!-- feed:#41 · akim.k · 2026-04-03T08:14:00Z -->" in content
     assert "Prefer virtual threads." in content
     assert content.count("---") >= 2
+
+
+def test_incorporate_dynamic_domain_uses_existing_file(tmp_path):
+    """incorporate() writes to an existing file for a domain not in DOMAIN_MAP."""
+    target = tmp_path / "language-guidelines" / "nodejs.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("# Node.js\n")
+
+    path = incorporate(tmp_path, 50, "alice", "2026-04-04T10:00:00Z", "nodejs", "Use ESM imports.")
+    assert path == target
+    assert "Use ESM imports." in target.read_text()
+
+
+def test_incorporate_dynamic_domain_creates_in_language_guidelines(tmp_path):
+    """incorporate() falls back to language-guidelines/<domain>.md for unknown domains."""
+    path = incorporate(tmp_path, 51, "bob", "2026-04-04T11:00:00Z", "rust", "Prefer owned types.")
+    assert path == tmp_path / "language-guidelines" / "rust.md"
+    assert path.exists()
+    assert "Prefer owned types." in path.read_text()
+
+
+def test_incorporate_dynamic_domain_general_guidelines_takes_priority(tmp_path):
+    """If the domain file lives in general-guidelines/, use that over creating a new one."""
+    target = tmp_path / "general-guidelines" / "security.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("# Security\n")
+
+    path = incorporate(tmp_path, 52, "carol", "2026-04-04T12:00:00Z", "security", "Hash passwords.")
+    assert path == target
+    assert "Hash passwords." in target.read_text()
