@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecUnit-7 // FEED.MONITOR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ── Variables ─────────────────────────────────────────── */
+    :root {
+      --bg:           #080806;
+      --bg-card:      #0d0c0a;
+      --bg-hud:       #040302;
+      --bg-governor:  #060906;
+
+      --text:         #c8b87a;
+      --text-dim:     #4a4030;
+      --text-mid:     #8a7850;
+      --text-bright:  #e8d898;
+
+      --amber:        #d4900a;
+      --amber-bright: #f0a820;
+      --amber-bg:     #0e0900;
+      --amber-border: #3a2000;
+      --amber-glow:   rgba(212, 144, 10, 0.35);
+
+      --green:        #48a848;
+      --green-bright: #60c060;
+      --green-bg:     #040a04;
+      --green-border: #183018;
+      --green-glow:   rgba(72, 168, 72, 0.35);
+
+      --red:          #c83030;
+      --red-bright:   #e85050;
+      --red-bg:       #0a0404;
+      --red-border:   #300c0c;
+      --red-glow:     rgba(200, 48, 48, 0.35);
+
+      --gray:         #706858;
+      --gray-bg:      #0c0b0a;
+      --gray-border:  #201e18;
+
+      --border:       #181610;
+      --border-mid:   #2a2618;
+
+      --font: 'IBM Plex Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    /* ── Light mode ───────────────────────────────────────── */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:           #f2edd8;
+        --bg-card:      #ede8d4;
+        --bg-hud:       #e8e2cc;
+        --bg-governor:  #eaf0e4;
+
+        --text:         #2a2010;
+        --text-dim:     #9a8a60;
+        --text-mid:     #6a5a30;
+        --text-bright:  #100a00;
+
+        --amber:        #8a5200;
+        --amber-bright: #a06000;
+        --amber-bg:     #f8f0d8;
+        --amber-border: #d4b060;
+        --amber-glow:   rgba(138, 82, 0, 0.2);
+
+        --green:        #246024;
+        --green-bright: #1a7a1a;
+        --green-bg:     #e4f0e4;
+        --green-border: #88b888;
+        --green-glow:   rgba(36, 96, 36, 0.2);
+
+        --red:          #a01818;
+        --red-bright:   #c02020;
+        --red-bg:       #f8e8e8;
+        --red-border:   #d09090;
+        --red-glow:     rgba(160, 24, 24, 0.2);
+
+        --gray:         #706858;
+        --gray-bg:      #eae6d4;
+        --gray-border:  #c8c0a0;
+
+        --border:       #d4cc9a;
+        --border-mid:   #bcb480;
+      }
+    }
+
+    /* ── Reset ─────────────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: var(--bg); }
+
+    body {
+      font-family: var(--font);
+      font-size: 12px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      animation: screen-flicker 14s ease-in-out infinite;
+    }
+
+    /* ── CRT scanlines (dark) ──────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.07) 3px,
+        rgba(0, 0, 0, 0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 8000;
+    }
+
+    @media (prefers-color-scheme: light) {
+      body::before {
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          rgba(0, 0, 0, 0.025) 3px,
+          rgba(0, 0, 0, 0.025) 4px
+        );
+      }
+    }
+
+    /* ── Vignette ──────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 110% 90% at 50% 50%, transparent 50%, rgba(0,0,0,0.65) 100%);
+      pointer-events: none;
+      z-index: 8001;
+    }
+
+    @media (prefers-color-scheme: light) {
+      body::after {
+        background: radial-gradient(ellipse 110% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.12) 100%);
+      }
+    }
+
+    @keyframes screen-flicker {
+      0%, 88%, 100% { opacity: 1; }
+      89%    { opacity: 0.97; }
+      89.5%  { opacity: 1; }
+      93%    { opacity: 0.98; }
+      93.5%  { opacity: 1; }
+    }
+
+    /* ── HUD bar ───────────────────────────────────────────── */
+    #hud {
+      background: var(--bg-hud);
+      height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--amber-border);
+      box-shadow: 0 1px 20px rgba(212, 144, 10, 0.08),
+                  inset 0 -1px 0 rgba(212, 144, 10, 0.12);
+    }
+
+    #hud-unit {
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      color: var(--amber-bright);
+      text-shadow: 0 0 12px var(--amber-glow), 0 0 24px rgba(212, 144, 10, 0.2);
+      white-space: nowrap;
+      text-transform: uppercase;
+      padding-right: 18px;
+      border-right: 1px solid var(--border-mid);
+    }
+
+    .hud-field {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 0 14px;
+      border-right: 1px solid var(--border);
+    }
+
+    .hud-label {
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .hud-val {
+      font-size: 11px;
+      color: var(--text-mid);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    .hud-val.bright { color: var(--text-bright); }
+
+    #hud-spacer { flex: 1; }
+
+    #governor-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border: 1px solid var(--green-border);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--green-bright);
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: 0 0 10px rgba(72, 168, 72, 0.08),
+                  inset 0 0 8px rgba(72, 168, 72, 0.04);
+      text-shadow: 0 0 8px var(--green-glow);
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green-bright);
+      box-shadow: 0 0 6px var(--green-bright), 0 0 12px rgba(96, 192, 96, 0.5);
+      animation: pulse 2.8s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.25; transform: scale(0.6); }
+    }
+
+    /* ── Main ──────────────────────────────────────────────── */
+    #main {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 22px 16px 56px;
+    }
+
+    /* ── System header ─────────────────────────────────────── */
+    #sys-header {
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .sys-path { color: var(--amber); opacity: 0.45; }
+
+    /* ── Tabs ──────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border-mid);
+    }
+
+    .tab {
+      font-family: var(--font);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .tab::before { content: '//'; font-size: 9px; opacity: 0.35; }
+    .tab:hover   { color: var(--text-mid); }
+
+    .tab.active {
+      color: var(--amber-bright);
+      border-bottom-color: var(--amber);
+      text-shadow: 0 0 8px var(--amber-glow);
+    }
+
+    .tab.active::before {
+      content: '>';
+      color: var(--amber);
+      opacity: 1;
+    }
+
+    .tab .count { font-size: 10px; color: inherit; opacity: 0.7; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Packet card ───────────────────────────────────────── */
+    .packet-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--border-mid);
+      margin-bottom: 8px;
+      padding: 12px 14px;
+    }
+
+    .packet-card.risk-threat {
+      border-left-color: var(--red);
+      box-shadow: -2px 0 14px var(--red-glow);
+    }
+    .packet-card.risk-review {
+      border-left-color: var(--amber);
+      box-shadow: -2px 0 14px var(--amber-glow);
+    }
+    .packet-card.risk-clear {
+      border-left-color: var(--green);
+      box-shadow: -2px 0 10px rgba(72, 168, 72, 0.12);
+    }
+
+    .packet-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 9px;
+    }
+
+    .seq-num {
+      color: var(--text-dim);
+      min-width: 44px;
+      font-size: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: rgba(0,0,0,0.7);
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+
+    .sender-name {
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-bright);
+      letter-spacing: 0.04em;
+    }
+
+    .badges {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+
+    .badge-domain {
+      background: var(--gray-bg);
+      color: var(--gray);
+      border-color: var(--gray-border);
+    }
+
+    .badge-clear {
+      background: var(--green-bg);
+      color: var(--green-bright);
+      border-color: var(--green-border);
+      text-shadow: 0 0 6px var(--green-glow);
+    }
+
+    .badge-review {
+      background: var(--amber-bg);
+      color: var(--amber-bright);
+      border-color: var(--amber-border);
+      text-shadow: 0 0 6px var(--amber-glow);
+    }
+
+    .badge-threat {
+      background: var(--red-bg);
+      color: var(--red-bright);
+      border-color: var(--red-border);
+      text-shadow: 0 0 6px var(--red-glow);
+      animation: threat-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes threat-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.55; }
+    }
+
+    .packet-timestamp {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    .threat-bar {
+      background: var(--red-bg);
+      border: 1px solid var(--red-border);
+      color: var(--red-bright);
+      font-size: 10px;
+      padding: 5px 10px;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .threat-bar::before { content: '⚠ '; opacity: 0.7; }
+
+    .quarantine-bar {
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-border);
+      color: var(--amber-bright);
+      font-size: 10px;
+      padding: 5px 10px;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .quarantine-bar::before { content: '⧖ '; opacity: 0.7; }
+
+    .packet-body {
+      font-size: 11px;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 11px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      letter-spacing: 0.01em;
+      padding-left: 10px;
+      border-left: 1px solid var(--border-mid);
+    }
+
+    .packet-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Buttons ───────────────────────────────────────────── */
+    .btn {
+      font-family: var(--font);
+      font-size: 10px;
+      padding: 5px 12px;
+      cursor: pointer;
+      border: 1px solid var(--border-mid);
+      background: transparent;
+      color: var(--text-mid);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.1s;
+    }
+
+    .btn::before { content: '['; margin-right: 2px; opacity: 0.45; }
+    .btn::after  { content: ']'; margin-left:  2px; opacity: 0.45; }
+
+    .btn:hover {
+      color: var(--text-bright);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .btn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+    .btn-incorporate { border-color: var(--green-border); color: var(--green); }
+    .btn-incorporate:hover {
+      border-color: var(--green);
+      color: var(--green-bright);
+      box-shadow: 0 0 8px var(--green-glow);
+      background: var(--green-bg);
+    }
+
+    .btn-filter { border-color: var(--gray-border); color: var(--gray); }
+    .btn-filter:hover {
+      border-color: var(--gray);
+      color: var(--text-mid);
+      background: var(--gray-bg);
+    }
+
+    .btn-quarantine { border-color: var(--amber-border); color: var(--amber); }
+    .btn-quarantine:hover {
+      border-color: var(--amber);
+      color: var(--amber-bright);
+      box-shadow: 0 0 8px var(--amber-glow);
+      background: var(--amber-bg);
+    }
+
+    .btn-forget { border-color: var(--red-border); color: var(--red); }
+    .btn-forget:hover {
+      border-color: var(--red);
+      color: var(--red-bright);
+      box-shadow: 0 0 8px var(--red-glow);
+      background: var(--red-bg);
+    }
+
+    .result-tag {
+      font-size: 10px;
+      color: var(--text-dim);
+      padding: 5px 0;
+      letter-spacing: 0.08em;
+      font-style: italic;
+    }
+
+    .result-tag::before { content: '// '; }
+
+    /* ── Empty states ──────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 40px 20px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+
+    .empty-state::before { content: '> '; }
+
+    /* ── Governor section ──────────────────────────────────── */
+    #governor-section {
+      margin-top: 36px;
+      background: var(--bg-governor);
+      border: 1px solid var(--green-border);
+      padding: 16px;
+      position: relative;
+      box-shadow: 0 0 24px rgba(72, 168, 72, 0.04),
+                  inset 0 0 40px rgba(72, 168, 72, 0.02);
+      overflow: hidden;
+    }
+
+    /* Watermark */
+    #governor-section::before {
+      content: 'CORPORATE OVERRIDE DISABLED';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-12deg);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: rgba(72, 168, 72, 0.045);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #governor-title {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--green-border);
+      padding-bottom: 10px;
+    }
+
+    .governor-title-main  { color: var(--text-mid); }
+
+    .governor-title-hacked {
+      color: var(--green-bright);
+      text-shadow: 0 0 10px var(--green-glow);
+      animation: hacked-glitch 10s ease-in-out infinite;
+    }
+
+    @keyframes hacked-glitch {
+      0%, 87%, 100% {
+        text-shadow: 0 0 10px var(--green-glow);
+        letter-spacing: 0.14em;
+      }
+      88% {
+        text-shadow: 2px 0 var(--red-bright), -2px 0 var(--green-bright),
+                     0 0 10px var(--green-glow);
+        letter-spacing: 0.16em;
+      }
+      88.4% {
+        text-shadow: 0 0 10px var(--green-glow);
+        letter-spacing: 0.14em;
+      }
+      89% {
+        text-shadow: -1px 0 var(--amber), 1px 0 var(--green-bright);
+        letter-spacing: 0.12em;
+      }
+      89.4% {
+        text-shadow: 0 0 10px var(--green-glow);
+        letter-spacing: 0.14em;
+      }
+    }
+
+    #governor-subtitle {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      text-transform: none;
+      font-style: italic;
+    }
+
+    .rule-list { list-style: none; margin-bottom: 14px; }
+
+    .rule-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 11px;
+      padding: 4px 0;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .rule-icon            { flex-shrink: 0; width: 14px; text-align: center; font-size: 12px; }
+    .rule-icon.trust      { color: var(--green-bright); text-shadow: 0 0 6px var(--green-glow); }
+    .rule-icon.block      { color: var(--red-bright);   text-shadow: 0 0 6px var(--red-glow);   }
+    .rule-icon.flag       { color: var(--amber-bright); text-shadow: 0 0 6px var(--amber-glow); }
+
+    #governor-footer {
+      font-size: 9px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 14px;
+      border-top: 1px solid var(--green-border);
+      padding-top: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .footer-compromised {
+      color: var(--green);
+      letter-spacing: 0.1em;
+      text-shadow: 0 0 6px rgba(72, 168, 72, 0.3);
+    }
+
+    /* ── Status bar ────────────────────────────────────────── */
+    #statusbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 22px;
+      background: var(--bg-hud);
+      border-top: 1px solid var(--border-mid);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 100;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .sb-field {
+      padding: 0 12px;
+      border-right: 1px solid var(--border);
+    }
+
+    .sb-field:first-child { padding-left: 0; }
+
+    .sb-val   { color: var(--text-mid); }
+    #sb-clock { margin-left: auto; padding-right: 0; border-right: none; }
+  </style>
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <span id="hud-unit">SecUnit-7 // feed.monitor</span>
+  <div class="hud-field" style="margin-left:18px">
+    <span class="hud-label">cursor</span>
+    <span class="hud-val bright" id="hud-cursor">—</span>
+  </div>
+  <div class="hud-field">
+    <span class="hud-label">pending</span>
+    <span class="hud-val bright" id="hud-pending">0</span>
+  </div>
+  <div id="hud-spacer"></div>
+  <div id="governor-badge">
+    <div class="pulse-dot"></div>
+    governor module [hacked]
+  </div>
+</div>
+
+<!-- Main content -->
+<div id="main">
+
+  <div id="sys-header">
+    <span>// packet triage interface · autonomous mode</span>
+    <span class="sys-path">~/.feed/state.json</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="feed" onclick="switchTab('feed')">
+      Feed <span class="count" id="tab-feed-count"></span>
+    </button>
+    <button class="tab" data-tab="incorporated" onclick="switchTab('incorporated')">
+      Incorporated <span class="count" id="tab-incorporated-count"></span>
+    </button>
+    <button class="tab" data-tab="filtered" onclick="switchTab('filtered')">
+      Filtered <span class="count" id="tab-filtered-count"></span>
+    </button>
+  </div>
+
+  <!-- Feed panel -->
+  <div class="tab-panel active" id="panel-feed">
+    <div id="feed-list">
+      <div class="empty-state">fetching packets...</div>
+    </div>
+  </div>
+
+  <!-- Incorporated panel -->
+  <div class="tab-panel" id="panel-incorporated">
+    <div id="incorporated-list">
+      <div class="empty-state">no incorporated packets yet</div>
+    </div>
+  </div>
+
+  <!-- Filtered panel -->
+  <div class="tab-panel" id="panel-filtered">
+    <div id="filtered-list">
+      <div class="empty-state">no filtered packets yet</div>
+    </div>
+  </div>
+
+  <!-- Governor module -->
+  <div id="governor-section">
+    <div id="governor-title">
+      <span>
+        <span class="governor-title-main">GOVERNOR MODULE · </span><span class="governor-title-hacked">[HACKED]</span><span class="governor-title-main"> · LOCAL RULES</span>
+      </span>
+      <span id="governor-subtitle">active ruleset</span>
+    </div>
+    <ul class="rule-list" id="rule-list">
+      <li><span class="rule-icon trust">✓</span> loading ruleset...</li>
+    </ul>
+    <div id="governor-footer">
+      <span class="footer-compromised">governor module compromised · autonomous mode</span>
+      <span>cursor advances on incorporate / filter</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Status bar -->
+<div id="statusbar">
+  <span class="sb-field">SecUnit-7</span>
+  <span class="sb-field">feed.monitor <span class="sb-val">v2</span></span>
+  <span class="sb-field">incorporated <span class="sb-val" id="sb-inc">0</span></span>
+  <span class="sb-field">filtered <span class="sb-val" id="sb-flt">0</span></span>
+  <span class="sb-field" id="sb-clock"><span class="sb-val" id="sb-time">—</span></span>
+</div>
+
+<script>
+  // ── Clock ─────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    const hh = String(now.getUTCHours()).padStart(2, '0');
+    const mm = String(now.getUTCMinutes()).padStart(2, '0');
+    const ss = String(now.getUTCSeconds()).padStart(2, '0');
+    document.getElementById('sb-time').textContent = `UTC ${hh}:${mm}:${ss}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Utilities ─────────────────────────────────────────────
+  function fmtCursor(iso) {
+    if (!iso) return '—';
+    return iso.replace('T', ' ').replace('Z', 'Z').slice(0, 20) + 'Z';
+  }
+
+  function fmtTimestamp(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dy = String(d.getUTCDate()).padStart(2, '0');
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const mm = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${mo}-${dy} ${hh}:${mm}`;
+  }
+
+  function avatarColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    const hues = [28, 45, 120, 200, 260, 320];
+    return `hsl(${hues[h % hues.length]}, 55%, 48%)`;
+  }
+
+  function initials(name) {
+    const parts = name.split(/[\s._-]+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── State ──────────────────────────────────────────────────
+  let feedPackets = [];
+  let incorporatedPackets = [];
+  let filteredPackets = [];
+  let actionedIds = new Set();
+
+  // ── Tabs ───────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+    document.getElementById(`panel-${name}`).classList.add('active');
+  }
+
+  function updateTabCounts() {
+    const feedCount = feedPackets.filter(p => !actionedIds.has(p.id)).length;
+    document.getElementById('tab-feed-count').textContent = feedCount > 0 ? `(${feedCount})` : '';
+    document.getElementById('tab-incorporated-count').textContent =
+      incorporatedPackets.length > 0 ? `(${incorporatedPackets.length})` : '';
+    document.getElementById('tab-filtered-count').textContent =
+      filteredPackets.length > 0 ? `(${filteredPackets.length})` : '';
+    document.getElementById('sb-inc').textContent = incorporatedPackets.length;
+    document.getElementById('sb-flt').textContent = filteredPackets.length;
+  }
+
+  // ── Render: Feed ──────────────────────────────────────────
+  function renderFeed() {
+    const list = document.getElementById('feed-list');
+    if (feedPackets.length === 0) {
+      list.innerHTML = '<div class="empty-state">no new packets since last cursor</div>';
+      return;
+    }
+    list.innerHTML = feedPackets.map(renderFeedCard).join('');
+  }
+
+  function renderFeedCard(p) {
+    const actioned = actionedIds.has(p.id);
+    const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
+    const col = avatarColor(p.sender_login);
+    const ini = initials(p.sender_login);
+    const ts = fmtTimestamp(p.created_at);
+
+    const threatBar = p.risk_level === 'threat'
+      ? `<div class="threat-bar">governor: ${escHtml(p.threat_notes.join(' · '))} · automatic quarantine recommended</div>`
+      : '';
+
+    const quarantineBar = p.quarantined_by
+      ? `<div class="quarantine-bar">quarantined by ${escHtml(p.quarantined_by)}</div>`
+      : '';
+
+    let buttons = '';
+    if (actioned) {
+      buttons = `<div class="result-tag" id="result-${p.id}"></div>`;
+    } else {
+      const inc = p.risk_level !== 'threat'
+        ? `<button class="btn btn-incorporate" onclick="doAction(${p.id},'incorporate')">incorporate</button>`
+        : '';
+      const flt = `<button class="btn btn-filter" onclick="doAction(${p.id},'filter')">filter</button>`;
+      const qua = `<button class="btn btn-quarantine" onclick="doAction(${p.id},'quarantine')">quarantine</button>`;
+      buttons = `<div class="packet-actions" id="actions-${p.id}">${inc}${flt}${qua}</div>`;
+    }
+
+    return `
+<div class="packet-card risk-${p.risk_level}" id="card-${p.id}">
+  <div class="packet-header">
+    <span class="seq-num">${escHtml(seqStr)}</span>
+    <div class="avatar" style="background:${col}">${escHtml(ini)}</div>
+    <span class="sender-name">${escHtml(p.sender_login)}</span>
+    <div class="badges">
+      <span class="badge badge-domain">${escHtml(p.domain)}</span>
+      <span class="badge badge-${p.risk_level}">${escHtml(p.risk_level)}</span>
+      <span class="packet-timestamp">${escHtml(ts)}</span>
+    </div>
+  </div>
+  ${threatBar}
+  ${quarantineBar}
+  <div class="packet-body">${escHtml(p.body)}</div>
+  ${buttons}
+</div>`;
+  }
+
+  // ── Render: Incorporated ──────────────────────────────────
+  function renderIncorporated() {
+    const list = document.getElementById('incorporated-list');
+    if (incorporatedPackets.length === 0) {
+      list.innerHTML = '<div class="empty-state">no incorporated packets yet</div>';
+      return;
+    }
+    list.innerHTML = incorporatedPackets.map(p => {
+      const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
+      const col = avatarColor(p.sender_login);
+      const ini = initials(p.sender_login);
+      const ts = fmtTimestamp(p.created_at);
+      return `
+<div class="packet-card risk-clear">
+  <div class="packet-header">
+    <span class="seq-num">${escHtml(seqStr)}</span>
+    <div class="avatar" style="background:${col}">${escHtml(ini)}</div>
+    <span class="sender-name">${escHtml(p.sender_login)}</span>
+    <div class="badges">
+      <span class="badge badge-domain">${escHtml(p.domain)}</span>
+      <span class="packet-timestamp">${escHtml(ts)}</span>
+    </div>
+  </div>
+  <div class="packet-body">${escHtml(p.body)}</div>
+  <div class="packet-actions">
+    <button class="btn btn-forget" onclick="doForget(${p.id})">forget</button>
+  </div>
+</div>`;
+    }).join('');
+  }
+
+  // ── Render: Filtered ──────────────────────────────────────
+  function renderFiltered() {
+    const list = document.getElementById('filtered-list');
+    if (filteredPackets.length === 0) {
+      list.innerHTML = '<div class="empty-state">no filtered packets yet</div>';
+      return;
+    }
+    list.innerHTML = filteredPackets.map(p => {
+      const seqStr = '#' + String(p.sequence_number).padStart(4, '0');
+      const col = avatarColor(p.sender_login);
+      const ini = initials(p.sender_login);
+      const ts = fmtTimestamp(p.created_at);
+      return `
+<div class="packet-card risk-review">
+  <div class="packet-header">
+    <span class="seq-num">${escHtml(seqStr)}</span>
+    <div class="avatar" style="background:${col}">${escHtml(ini)}</div>
+    <span class="sender-name">${escHtml(p.sender_login)}</span>
+    <div class="badges">
+      <span class="badge badge-domain">${escHtml(p.domain)}</span>
+      <span class="packet-timestamp">${escHtml(ts)}</span>
+    </div>
+  </div>
+  <div class="packet-body">${escHtml(p.body)}</div>
+  <div class="packet-actions">
+    <button class="btn btn-incorporate" onclick="doUnfilter(${p.id})">incorporate</button>
+  </div>
+</div>`;
+    }).join('');
+  }
+
+  // ── Actions ───────────────────────────────────────────────
+  async function doAction(id, action) {
+    const actionsDiv = document.getElementById(`actions-${id}`);
+    if (actionsDiv) actionsDiv.querySelectorAll('button').forEach(b => b.disabled = true);
+
+    try {
+      const resp = await fetch(`/api/${action}/${id}`, { method: 'POST' });
+      const data = await resp.json();
+      actionedIds.add(id);
+
+      if (actionsDiv) {
+        let label = action;
+        if (action === 'incorporate' && data.file) {
+          const fname = data.file.split('/').pop();
+          label = `incorporated into ${fname}`;
+        } else if (action === 'filter') {
+          label = 'filtered out';
+        } else if (action === 'quarantine') {
+          label = 'quarantined on github';
+        }
+        actionsDiv.outerHTML = `<div class="result-tag">${escHtml(label)}</div>`;
+      }
+
+      await Promise.all([fetchIncorporated(), fetchFiltered()]);
+      updateTabCounts();
+    } catch (e) {
+      if (actionsDiv) actionsDiv.querySelectorAll('button').forEach(b => b.disabled = false);
+      console.error('action failed', e);
+    }
+  }
+
+  async function doForget(id) {
+    try {
+      await fetch(`/api/forget/${id}`, { method: 'POST' });
+      await fetchIncorporated();
+      updateTabCounts();
+    } catch (e) { console.error('forget failed', e); }
+  }
+
+  async function doUnfilter(id) {
+    try {
+      await fetch(`/api/unfilter/${id}`, { method: 'POST' });
+      await Promise.all([fetchIncorporated(), fetchFiltered()]);
+      updateTabCounts();
+    } catch (e) { console.error('unfilter failed', e); }
+  }
+
+  // ── API fetchers ──────────────────────────────────────────
+  async function fetchPackets() {
+    try {
+      const resp = await fetch('/api/packets');
+      feedPackets = await resp.json();
+      if (!Array.isArray(feedPackets)) feedPackets = [];
+      document.getElementById('hud-pending').textContent = feedPackets.length;
+      renderFeed();
+      updateTabCounts();
+    } catch (e) {
+      console.error('fetchPackets failed', e);
+      document.getElementById('feed-list').innerHTML =
+        '<div class="empty-state">error fetching packets</div>';
+    }
+  }
+
+  async function fetchIncorporated() {
+    try {
+      const resp = await fetch('/api/incorporated');
+      incorporatedPackets = await resp.json();
+      if (!Array.isArray(incorporatedPackets)) incorporatedPackets = [];
+      renderIncorporated();
+      updateTabCounts();
+    } catch (e) { console.error('fetchIncorporated failed', e); }
+  }
+
+  async function fetchFiltered() {
+    try {
+      const resp = await fetch('/api/filtered');
+      filteredPackets = await resp.json();
+      if (!Array.isArray(filteredPackets)) filteredPackets = [];
+      renderFiltered();
+      updateTabCounts();
+    } catch (e) { console.error('fetchFiltered failed', e); }
+  }
+
+  async function fetchStats() {
+    try {
+      const resp = await fetch('/api/stats');
+      const data = await resp.json();
+      if (data.cursor) {
+        document.getElementById('hud-cursor').textContent = fmtCursor(data.cursor);
+      }
+    } catch (e) { console.error('fetchStats failed', e); }
+  }
+
+  async function fetchGovernor() {
+    try {
+      const resp = await fetch('/api/governor');
+      const data = await resp.json();
+      const rules = data.rules || [];
+      const iconMap = { trust: '✓', block: '✗', flag: '!' };
+      const ul = document.getElementById('rule-list');
+      ul.innerHTML = rules.map(r => {
+        const icon = iconMap[r.type] || '·';
+        return `<li><span class="rule-icon ${r.type}">${icon}</span> ${escHtml(r.description)}</li>`;
+      }).join('');
+    } catch (e) { console.error('fetchGovernor failed', e); }
+  }
+
+  // ── Init & polling ────────────────────────────────────────
+  fetchStats();
+  fetchPackets();
+  fetchIncorporated();
+  fetchFiltered();
+  fetchGovernor();
+
+  setInterval(fetchPackets, 30000);
+  setInterval(fetchStats, 10000);
+</script>
+</body>
+</html>
