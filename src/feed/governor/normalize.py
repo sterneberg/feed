@@ -64,7 +64,8 @@ def _reveal_base64(text: str) -> str:
             additions.append(decoded)
     if not additions:
         return text
-    return text + "\n" + "\n".join(additions)
+    fenced = "\n".join(f"```\n{decoded}\n```" for decoded in additions)
+    return text + "\n" + fenced
 
 
 def canonicalize(body: str) -> str:
