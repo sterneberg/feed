@@ -119,5 +119,4 @@ Claude Code picks this up immediately — no pull, no restart.
 ## Todo
 
 - [ ] Make quarantine logic more robust — threat classification should use a sandboxed AI model rather than pattern matching, to catch adversarial inputs that evade static rules
-- [ ] The Feed Monitor should scan all repositories across your org for `memory`-labeled issues, not just a single configured repo
 - [ ] Build the **dreamer** — a background agent that periodically re-reads `FEED_KNOWLEDGE_ROOT`, re-sorts packets the TF-IDF router got wrong, splits bloated files, and prunes stale decisions. The ingest path stays cheap and deterministic; the dreamer handles semantics and housekeeping out of band.

@@ -18,6 +18,7 @@ class StoredPacket(BaseModel):
     created_at: str
     risk_level: str
     threat_notes: list[str] = []
+    repo: str = ""  # "owner/repo"; empty for packets stored before multi-repo support
 
 
 class SessionStats(BaseModel):
