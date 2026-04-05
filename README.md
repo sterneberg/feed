@@ -20,7 +20,7 @@ You see the feed. You decide.
 
 ![The feed — incoming packets with incorporate / filter / quarantine actions](resources/feed.png)
 
-When you incorporate a packet, it gets appended to the right local `CLAUDE.md` file based on domain labels — `java` goes to `language-guidelines/java.md`, `testing` goes to `general-guidelines/testing.md`, and so on. Claude Code reads these files automatically. The decision is now executable: applied in real time while code is being written, not sitting in a document nobody opens.
+When you incorporate a packet, it gets appended to the right local `CLAUDE.md` file — `language-guidelines/java.md`, `general-guidelines/testing.md`, and so on. There are no category labels in GitHub. The Feed reads the packet body and routes it by content, using TF-IDF similarity against the files already in your knowledge base. A note about Spring Boot constructor injection lands in `java.md`. A note about `async def` and pytest lands in `python.md`. A note that mentions neither — "be kind in reviews" — falls back to the catch-all `CLAUDE.md`, where the dreamer can pick it up later (see below). Claude Code reads all of these files automatically. The decision is now executable: applied in real time while code is being written, not sitting in a document nobody opens.
 
 ![Incorporated packets — decisions that are now part of your local programming](resources/incorporated.png)
 
@@ -63,9 +63,20 @@ uv run feed
 
 Threat packets cannot be incorporated — the button is removed from the UI. Governor rules are local and personal. Each developer configures their own.
 
-## Domain mapping
+## How routing works
 
-| Domain label | Target file |
+Each target file under `FEED_KNOWLEDGE_ROOT` is treated as one document in a small corpus. When a new packet arrives, The Feed:
+
+1. Tokenizes the packet body (lowercase, stopwords dropped).
+2. Builds a TF-IDF vector over the same vocabulary as the corpus.
+3. Computes cosine similarity against every target file.
+4. Routes to the highest-scoring file — unless the top score is below a confidence threshold, in which case it falls back to the catch-all `CLAUDE.md`.
+
+This is deterministic, explainable, and dependency-free (no embeddings, no LLM call in the hot path). A packet mentioning `FastAPI`, `Pydantic`, and `uvicorn` is drawn to `python.md` because those rare tokens already live there. A packet with no meaningful overlap is routed to the catch-all rather than guessed at.
+
+To keep cold start honest — when a target file is empty or missing — the classifier concatenates each file's live contents with a short seed vocabulary (`Spring Boot Maven Gradle…` for `java`, `FastAPI Pydantic asyncio…` for `python`, etc.). As real packets accumulate, the seeds' influence fades proportionally. The seeds live in [`src/feed/classifier.py`](src/feed/classifier.py) and can be edited per deployment.
+
+| Domain | Target file |
 |---|---|
 | `java` | `language-guidelines/java.md` |
 | `python` | `language-guidelines/python.md` |
@@ -73,7 +84,19 @@ Threat packets cannot be incorporated — the button is removed from the UI. Gov
 | `api` | `general-guidelines/specs-and-plans.md` |
 | `testing` | `general-guidelines/testing.md` |
 | `observability` | `general-guidelines/observability.md` |
-| `general` | `CLAUDE.md` |
+| `general` (catch-all) | `CLAUDE.md` |
+
+## The dreamer
+
+Ingest-time routing is intentionally simple. It handles obvious cases well and falls back to the catch-all when unsure. Over time, three kinds of drift accumulate:
+
+- Notes that landed in `CLAUDE.md` because the dreamer hadn't yet taught the classifier what they were about.
+- Notes that landed in the wrong file because the classifier only sees literal token overlap, not semantics.
+- Files that have grown long enough to deserve being split, or short-lived topics that have gone stale.
+
+The Feed expects a separate background agent — the **dreamer** — to periodically re-read the full knowledge base, re-sort packets, split or merge files, and prune decisions that no longer apply. The dreamer is not part of this daemon. It runs on its own schedule (hourly, nightly, whenever you like) against the same `FEED_KNOWLEDGE_ROOT`. The ingest path stays cheap and deterministic; the dreamer handles semantics and housekeeping out of band.
+
+Because each incorporated block carries a `<!-- feed:#N · sender · timestamp -->` header, the dreamer can always trace a decision back to its source issue when it needs to justify a move.
 
 On incorporate, a dated block is appended:
 
@@ -90,11 +113,11 @@ Claude Code picks this up immediately — no pull, no restart.
 
 1. Create a repository (e.g. `org/team-brain`).
 2. Add a PR template with a `## Team Brain` section for decision summaries.
-3. When merging a significant decision, open an issue with the `memory` label and a domain label (`java`, `testing`, `general`, etc.).
-4. The Feed picks it up on the next poll.
+3. When merging a significant decision, open an issue with the `memory` label. That's the only label the ingest path cares about — The Feed classifies the body by content, so you don't need (and should not add) category labels like `java` or `python`.
+4. The Feed picks it up on the next poll and routes it by TF-IDF similarity against your existing knowledge base.
 
 ## Todo
 
 - [ ] Make quarantine logic more robust — threat classification should use a sandboxed AI model rather than pattern matching, to catch adversarial inputs that evade static rules
 - [ ] The Feed Monitor should scan all repositories across your org for `memory`-labeled issues, not just a single configured repo
-- [ ] The knowledge base structure should be free-form — let AI automatically restructure and reconcile `CLAUDE.md` files as new packets are incorporated, instead of relying on a fixed domain-to-file mapping
+- [ ] Build the **dreamer** — a background agent that periodically re-reads `FEED_KNOWLEDGE_ROOT`, re-sorts packets the TF-IDF router got wrong, splits bloated files, and prunes stale decisions. The ingest path stays cheap and deterministic; the dreamer handles semantics and housekeeping out of band.

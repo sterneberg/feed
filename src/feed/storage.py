@@ -20,6 +20,12 @@ class StoredPacket(BaseModel):
     threat_notes: list[str] = []
 
 
+class SessionStats(BaseModel):
+    incorporated: int = 0
+    filtered: int = 0
+    quarantined: int = 0
+
+
 class State(BaseModel):
     cursor: str = Field(
         default_factory=lambda: (
@@ -28,6 +34,8 @@ class State(BaseModel):
     )
     incorporated_packets: list[StoredPacket] = Field(default_factory=list)
     filtered_packets: list[StoredPacket] = Field(default_factory=list)
+    session_stats: SessionStats = Field(default_factory=SessionStats)
+    governor_rules: list = Field(default_factory=list)
 
 
 STATE_PATH = Path(os.getenv("FEED_STATE_PATH", Path.home() / ".feed" / "state.json"))
@@ -65,3 +73,8 @@ def advance_cursor(state: State, timestamp: str) -> None:
     """Update cursor only if timestamp is strictly newer."""
     if timestamp > state.cursor:
         state.cursor = timestamp
+
+
+def increment_stat(state: State, stat: str) -> None:
+    """Increment a session counter by name: 'incorporated', 'filtered', or 'quarantined'."""
+    setattr(state.session_stats, stat, getattr(state.session_stats, stat) + 1)

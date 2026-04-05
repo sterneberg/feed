@@ -1,12 +1,11 @@
 """Shared Pydantic models and packet assembly."""
 
 import re
+from pathlib import Path
 from pydantic import BaseModel
 from feed.github import RawIssue, check_org_membership
-from feed.governor import classify
-from feed.writer import DOMAIN_MAP
-
-_KNOWN_DOMAINS = set(DOMAIN_MAP.keys())
+from feed.governor import classify as governor_classify
+from feed.classifier import classify as classify_domain, load_corpus
 
 
 class Packet(BaseModel):
@@ -34,15 +33,6 @@ def extract_team_brain(body: str) -> str:
     return after.strip()
 
 
-def extract_domain(labels: list) -> str:
-    """Return first matching known domain label, or 'general'."""
-    for label in labels:
-        name = label.name if hasattr(label, "name") else label.get("name", "")
-        if name in _KNOWN_DOMAINS and name != "general":
-            return name
-    return "general"
-
-
 def _extract_quarantined_by(labels: list) -> str | None:
     """If a 'quarantined:username' label exists, return the username."""
     for label in labels:
@@ -56,6 +46,7 @@ async def build_packets(
     raw_issues: list[RawIssue],
     org: str,
     token: str,
+    knowledge_root: str | Path,
 ) -> list[Packet]:
     """Fetch org membership per unique sender, classify each issue, return Packets."""
     membership_cache: dict[str, bool] = {}
@@ -65,9 +56,15 @@ async def build_packets(
         if login not in membership_cache:
             membership_cache[login] = await check_org_membership(org, login, token)
 
+    # Load the domain corpus once per batch — re-reading the knowledge
+    # base files for every packet would be wasteful.
+    corpus = load_corpus(knowledge_root)
+
     packets = []
     for issue in raw_issues:
-        # Skip issues already incorporated or filtered globally
+        # Skip issues already incorporated or filtered globally. These
+        # are *state* labels, not category labels — the feed still uses
+        # them for lifecycle tracking.
         label_names = {
             (l.name if hasattr(l, "name") else l.get("name", ""))
             for l in issue.labels
@@ -79,8 +76,8 @@ async def build_packets(
         is_member = membership_cache.get(login, False)
         raw_body = issue.body or ""
         body = extract_team_brain(raw_body) or raw_body
-        risk_level, threat_notes = classify(body, login, is_member)
-        domain = extract_domain(issue.labels)
+        risk_level, threat_notes = governor_classify(body, login, is_member)
+        domain = classify_domain(body, corpus)
         quarantined_by = _extract_quarantined_by(issue.labels)
 
         packets.append(
