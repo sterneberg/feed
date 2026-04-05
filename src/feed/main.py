@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 
-from feed.github import fetch_issues, add_label, RateLimitError
+from feed.github import fetch_org_issues, add_label, RateLimitError
 from feed.governor import get_ruleset
 from feed.models import build_packets, Packet
 from feed.storage import load_state, save_state, advance_cursor, increment_stat, StoredPacket
@@ -15,7 +15,6 @@ from feed.writer import incorporate, remove
 
 PORT = int(os.getenv("FEED_PORT", "2626"))
 GITHUB_TOKEN = os.getenv("FEED_GITHUB_TOKEN", "")
-GITHUB_REPO = os.getenv("FEED_GITHUB_REPO", "")
 GITHUB_ORG = os.getenv("FEED_GITHUB_ORG", "")
 GITHUB_USER = os.getenv("FEED_GITHUB_USER", "")
 KNOWLEDGE_ROOT = os.getenv("FEED_KNOWLEDGE_ROOT", str(Path.home() / "team-brain"))
@@ -53,7 +52,7 @@ async def index():
 async def get_packets():
     global _packet_cache
     try:
-        raw = await fetch_issues(GITHUB_REPO, _state.cursor, GITHUB_TOKEN)
+        raw = await fetch_org_issues(GITHUB_ORG, _state.cursor, GITHUB_TOKEN)
         packets = await build_packets(raw, GITHUB_ORG, GITHUB_TOKEN, KNOWLEDGE_ROOT)
         # Exclude packets already in local incorporated/filtered lists
         local_ids = {p.id for p in _state.incorporated_packets} | {
@@ -115,7 +114,7 @@ async def quarantine_packet(packet_id: int):
         raise HTTPException(status_code=404, detail="Packet not found")
     try:
         label = f"quarantined:{GITHUB_USER}"
-        await add_label(GITHUB_REPO, packet.sequence_number, label, GITHUB_TOKEN)
+        await add_label(packet.repo, packet.sequence_number, label, GITHUB_TOKEN)
         increment_stat(_state, "quarantined")
         return {"status": "quarantined"}
     except Exception as e:

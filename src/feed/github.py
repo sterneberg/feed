@@ -29,6 +29,7 @@ class RawIssue(BaseModel):
     user: IssueUser
     labels: list[IssueLabel] = []
     created_at: str
+    repo: str = ""  # "owner/repo", populated by fetch_org_issues
 
 
 def _headers(token: str) -> dict[str, str]:
@@ -60,6 +61,32 @@ async def fetch_issues(repo: str, since: str, token: str) -> list[RawIssue]:
         _check_rate_limit(response)
         response.raise_for_status()
         return [RawIssue(**item) for item in response.json()]
+
+
+async def fetch_org_issues(org: str, since: str, token: str) -> list[RawIssue]:
+    """Fetch open issues labeled 'memory' across all org repos updated since cursor.
+
+    Uses the Search API (one call) instead of per-repo endpoint (N+1 calls).
+    Rate limit: 30 authenticated search requests/min — fine for polling use.
+    """
+    url = f"{GITHUB_API}/search/issues"
+    query = f"label:memory org:{org} state:open updated:>{since}"
+    params = {"q": query, "per_page": "100"}
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=_headers(token), params=params)
+        _check_rate_limit(response)
+        response.raise_for_status()
+        items = response.json().get("items", [])
+        issues = []
+        for item in items:
+            # Derive "owner/repo" from repository_url like
+            # "https://api.github.com/repos/owner/repo"
+            repo_url = item.get("repository_url", "")
+            repo_name = "/".join(repo_url.split("/")[-2:]) if repo_url else ""
+            issue = RawIssue(**{k: v for k, v in item.items() if k != "repository_url"})
+            issue.repo = repo_name
+            issues.append(issue)
+        return issues
 
 
 async def check_org_membership(org: str, username: str, token: str) -> bool:

@@ -19,6 +19,7 @@ class Packet(BaseModel):
     risk_level: str
     threat_notes: list[str]
     quarantined_by: str | None = None
+    repo: str = ""  # "owner/repo" the issue lives in
 
 
 def extract_team_brain(body: str) -> str:
@@ -92,6 +93,7 @@ async def build_packets(
                 risk_level=risk_level,
                 threat_notes=threat_notes,
                 quarantined_by=quarantined_by,
+                repo=issue.repo,
             )
         )
 

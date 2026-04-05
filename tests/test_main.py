@@ -66,7 +66,7 @@ def client_with_threat_packet(client):
 
 
 def test_get_packets_returns_correct_structure(client):
-    with patch("feed.main.fetch_issues", new=AsyncMock(return_value=[])):
+    with patch("feed.main.fetch_org_issues", new=AsyncMock(return_value=[])):
         with patch("feed.main.build_packets", new=AsyncMock(return_value=[CLEAR_PACKET])):
             resp = client.get("/api/packets")
 
