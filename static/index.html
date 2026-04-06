@@ -619,20 +619,26 @@
 
     .rule-list { list-style: none; margin-bottom: 14px; }
 
+    .rule-group-header {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rule-group-header:first-child { margin-top: 0; }
+    .rule-group-header.blocked { color: var(--red-bright); }
+    .rule-group-header.flagged { color: var(--amber-bright); }
+    .rule-group-header.scoring { color: var(--green-bright); }
+
     .rule-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
       font-size: 11px;
-      padding: 4px 0;
+      padding: 3px 0 3px 22px;
       color: var(--text);
       line-height: 1.5;
     }
-
-    .rule-icon            { flex-shrink: 0; width: 14px; text-align: center; font-size: 12px; }
-    .rule-icon.trust      { color: var(--green-bright); text-shadow: 0 0 6px var(--green-glow); }
-    .rule-icon.block      { color: var(--red-bright);   text-shadow: 0 0 6px var(--red-glow);   }
-    .rule-icon.flag       { color: var(--amber-bright); text-shadow: 0 0 6px var(--amber-glow); }
 
     #governor-footer {
       font-size: 9px;
@@ -1057,12 +1063,12 @@
     try {
       const resp = await fetch('/api/governor');
       const data = await resp.json();
-      const rules = data.rules || [];
-      const iconMap = { trust: '✓', block: '✗', flag: '!' };
+      const groups = data.rules || [];
       const ul = document.getElementById('rule-list');
-      ul.innerHTML = rules.map(r => {
-        const icon = iconMap[r.type] || '·';
-        return `<li><span class="rule-icon ${r.type}">${icon}</span> ${escHtml(r.description)}</li>`;
+      ul.innerHTML = groups.map(g => {
+        const header = `<div class="rule-group-header ${escHtml(g.group)}">${escHtml(g.label)}</div>`;
+        const items = g.rules.map(r => `<li>${escHtml(r)}</li>`).join('');
+        return header + items;
       }).join('');
     } catch (e) { console.error('fetchGovernor failed', e); }
   }
